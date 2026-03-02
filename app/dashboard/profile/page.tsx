@@ -5,13 +5,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, Camera, MapPin, Globe, Instagram, Youtube, Twitter, CheckCircle } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui';
-import { Button } from '../../../components/ui';
-import { Input } from '../../../components/ui';
-import { AvatarUpload, ImageUpload } from '../../../components/upload/ImageUpload';
-import { Badge } from '../../../components/ui';
-import { useUser, useUserRole, useCreatorProfile, useBrandProfile, useAuth } from '../../../contexts/AuthContext';
-import { cn } from '../../../lib/utils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { AvatarUpload, ImageUpload } from '@/components/upload/ImageUpload';
+import { Badge } from '@/components/ui';
+import { useUser, useUserRole, useCreatorProfile, useBrandProfile, useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
 
 // Creator profile schema
 const creatorProfileSchema = z.object({

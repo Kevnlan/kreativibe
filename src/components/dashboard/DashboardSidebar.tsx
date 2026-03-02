@@ -6,10 +6,8 @@ import { cn } from '../../lib/utils';
 import { 
   Home, 
   User, 
-  Settings, 
   Wallet, 
   FileText, 
-  MessageSquare, 
   TrendingUp,
   Users,
   ShoppingBag,
@@ -27,6 +25,7 @@ interface SidebarItem {
 }
 
 const sidebarItems: SidebarItem[] = [
+  // Shared
   {
     name: 'Overview',
     href: '/dashboard',
@@ -36,39 +35,70 @@ const sidebarItems: SidebarItem[] = [
     name: 'Profile',
     href: '/dashboard/profile',
     icon: <User className="h-4 w-4" />,
+    roles: ['CREATOR', 'BRAND'],
   },
+  // Creator
   {
-    name: 'Posts',
-    href: '/dashboard/posts',
+    name: 'My Posts',
+    href: '/dashboard/creative/posts',
     icon: <FileText className="h-4 w-4" />,
     roles: ['CREATOR'],
   },
   {
+    name: 'Browse Brands',
+    href: '/dashboard/creative/brands',
+    icon: <ShoppingBag className="h-4 w-4" />,
+    roles: ['CREATOR'],
+  },
+  {
+    name: 'Portfolio',
+    href: '/dashboard/creative/portfolio',
+    icon: <BarChart3 className="h-4 w-4" />,
+    roles: ['CREATOR'],
+  },
+  // Brand
+  {
     name: 'Marketplace',
-    href: '/dashboard/marketplace',
+    href: '/marketplace',
     icon: <ShoppingBag className="h-4 w-4" />,
     roles: ['BRAND'],
   },
   {
     name: 'Campaigns',
-    href: '/dashboard/campaigns',
+    href: '/dashboard/brand/campaigns',
     icon: <TrendingUp className="h-4 w-4" />,
     roles: ['BRAND'],
   },
   {
-    name: 'Wallet',
-    href: '/dashboard/wallet',
-    icon: <Wallet className="h-4 w-4" />,
+    name: 'Analytics',
+    href: '/dashboard/brand/analytics',
+    icon: <BarChart3 className="h-4 w-4" />,
+    roles: ['BRAND'],
+  },
+  // Admin
+  {
+    name: 'Creators',
+    href: '/dashboard/admin/creators',
+    icon: <Users className="h-4 w-4" />,
+    roles: ['ADMIN'],
   },
   {
-    name: 'Messages',
-    href: '/dashboard/messages',
-    icon: <MessageSquare className="h-4 w-4" />,
+    name: 'Brands',
+    href: '/dashboard/admin/brands',
+    icon: <ShoppingBag className="h-4 w-4" />,
+    roles: ['ADMIN'],
+  },
+  {
+    name: 'Transactions',
+    href: '/dashboard/admin/transactions',
+    icon: <Wallet className="h-4 w-4" />,
+    roles: ['ADMIN'],
   },
   {
     name: 'Analytics',
-    href: '/dashboard/analytics',
+    href: '/dashboard/admin/analytics',
     icon: <BarChart3 className="h-4 w-4" />,
+    roles: ['ADMIN'],
   },
   {
     name: 'User Management',
@@ -81,11 +111,6 @@ const sidebarItems: SidebarItem[] = [
     href: '/dashboard/admin/settings',
     icon: <Shield className="h-4 w-4" />,
     roles: ['ADMIN'],
-  },
-  {
-    name: 'Settings',
-    href: '/dashboard/settings',
-    icon: <Settings className="h-4 w-4" />,
   },
 ];
 

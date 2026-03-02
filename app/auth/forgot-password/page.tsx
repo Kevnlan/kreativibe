@@ -6,9 +6,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
-import { apiClient } from '../../../lib/api-client';
-import { Button, Input, Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui';
-import { cn } from '../../../lib/utils';
+import { apiClient } from '@/lib/api-client';
+import { Button, Input, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { cn } from '@/lib/utils';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Please enter a valid email address'),

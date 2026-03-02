@@ -12,11 +12,11 @@ import {
   Calendar,
   Target
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui';
-import { Button } from '../../../components/ui';
-import { Input } from '../../../components/ui';
-import { useBrandProfile, useUser } from '../../../contexts/AuthContext';
-import { formatCurrency, formatNumber } from '../../../lib/utils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { Input } from '@/components/ui';
+import { useBrandProfile, useUser } from '@/contexts/AuthContext';
+import { formatCurrency, formatNumber } from '@/lib/utils';
 
 export default function BrandDashboard() {
   const brandProfile = useBrandProfile();

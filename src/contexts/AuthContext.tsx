@@ -55,10 +55,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const signup = async (email: string, password: string, name: string, role: 'CREATOR' | 'BRAND'): Promise<void> => {
+  const signup = async (email: string, password: string, name: string, role: 'CREATOR' | 'BRAND', countryId?: string): Promise<void> => {
     setLoading(true);
     try {
-      const response = await apiClient.signup(email, password, name, role);
+      const response = await apiClient.signup(email, password, name, role, countryId);
       setUser(response.user);
       setCreatorProfile(response.creatorProfile || null);
       setBrandProfile(response.brandProfile || null);

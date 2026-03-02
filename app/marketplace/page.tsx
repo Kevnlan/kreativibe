@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { Grid, List, Search, SlidersHorizontal } from 'lucide-react';
-import { Navigation } from '../../components/layout/Navigation';
-import { MarketplaceFilters } from '../../components/marketplace/MarketplaceFilters';
-import { CreatorPostCard } from '../../components/marketplace/CreatorPostCard';
-import { Button } from '../../components/ui';
-import { Badge } from '../../components/ui';
+import { Navigation } from '@/components/layout/Navigation';
+import { MarketplaceFilters } from '@/components/marketplace/MarketplaceFilters';
+import { CreatorPostCard } from '@/components/marketplace/CreatorPostCard';
+import { Button } from '@/components/ui';
+import { Badge } from '@/components/ui';
 
 // Mock data for demonstration
 const mockCreators = [

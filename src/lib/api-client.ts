@@ -142,12 +142,12 @@ class ApiClient {
         password,
       });
 
-      const { user, token, refreshToken, creatorProfile, brandProfile } = response.data;
-      this.setTokens(token, refreshToken);
+      const { user, accessToken, refreshToken, creatorProfile, brandProfile } = response.data;
+      this.setTokens(accessToken, refreshToken);
 
       return {
         user,
-        token,
+        accessToken,
         refreshToken,
         creatorProfile,
         brandProfile,
@@ -157,21 +157,22 @@ class ApiClient {
     }
   }
 
-  async signup(email: string, password: string, name: string, role: 'CREATOR' | 'BRAND'): Promise<AuthResponse> {
+  async signup(email: string, password: string, name: string, role: 'CREATOR' | 'BRAND', countryId?: string): Promise<AuthResponse> {
     try {
-      const response = await this.client.post('/auth/signup', {
+      const response = await this.client.post('/auth/register', {
         email,
         password,
         name,
         role,
+        countryId,
       });
 
-      const { user, token, refreshToken, creatorProfile, brandProfile } = response.data;
-      this.setTokens(token, refreshToken);
+      const { user, accessToken, refreshToken, creatorProfile, brandProfile } = response.data;
+      this.setTokens(accessToken, refreshToken);
 
       return {
         user,
-        token,
+        accessToken,
         refreshToken,
         creatorProfile,
         brandProfile,

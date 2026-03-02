@@ -64,7 +64,7 @@ export interface AuthState {
 
 export interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string, role: 'CREATOR' | 'BRAND') => Promise<void>;
+  signup: (email: string, password: string, name: string, role: 'CREATOR' | 'BRAND', countryId?: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   updateProfile: (data: Partial<CreatorProfile | BrandProfile>) => Promise<void>;
@@ -84,7 +84,7 @@ export interface SignupCredentials {
 
 export interface AuthResponse {
   user: User;
-  token: string;
+  accessToken: string;
   refreshToken: string;
   creatorProfile?: CreatorProfile;
   brandProfile?: BrandProfile;

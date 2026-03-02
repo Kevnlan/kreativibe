@@ -1,7 +1,7 @@
-import { Navigation } from '../src/components/layout/Navigation';
-import { HeroSection } from '../src/components/homepage/HeroSection';
-import { FeaturesSection } from '../src/components/homepage/FeaturesSection';
-import { CTASection } from '../src/components/homepage/CTASection';
+import { Navigation } from '@/components/layout/Navigation';
+import { HeroSection } from '@/components/homepage/HeroSection';
+import { FeaturesSection } from '@/components/homepage/FeaturesSection';
+import { CTASection } from '@/components/homepage/CTASection';
 
 export default function Home() {
   return (

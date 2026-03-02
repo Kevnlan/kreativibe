@@ -12,10 +12,10 @@ import {
   MessageCircle,
   Calendar
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui';
-import { Button } from '../../../components/ui';
-import { useCreatorProfile, useUser } from '../../../contexts/AuthContext';
-import { formatCurrency, formatNumber } from '../../../lib/utils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { useCreatorProfile, useUser } from '@/contexts/AuthContext';
+import { formatCurrency, formatNumber } from '@/lib/utils';
 
 export default function CreatorDashboard() {
   const creatorProfile = useCreatorProfile();

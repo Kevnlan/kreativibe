@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useUserRole, useIsLoading } from '../../contexts/AuthContext';
+import { useAuth, useUserRole, useIsLoading } from '@/contexts/AuthContext';
 
 export default function DashboardPage() {
   const router = useRouter();
