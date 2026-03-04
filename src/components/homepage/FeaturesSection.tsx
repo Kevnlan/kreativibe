@@ -1,70 +1,106 @@
 'use client';
 
-import { Shield, Zap, Users, TrendingUp, MessageSquare, Target } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui';
+import { Shield, Zap, TrendingUp, Star, DollarSign, Target, BarChart3, Users } from 'lucide-react';
 
-const features = [
+const creatorBenefits = [
   {
-    icon: <Shield className="h-6 w-6" />,
-    title: "Verified Creators",
-    description: "All creators go through our verification process to ensure quality and authenticity."
+    icon: <DollarSign className="h-5 w-5" />,
+    title: 'Set your own rates',
+    description: 'Price your content packages freely — Stories, Posts, Reels, Videos. You control what you charge.',
   },
   {
-    icon: <Zap className="h-6 w-6" />,
-    title: "Quick Campaigns",
-    description: "Launch campaigns in minutes with our streamlined process and intuitive platform."
+    icon: <Shield className="h-5 w-5" />,
+    title: 'Get a verified badge',
+    description: 'Complete KYC once and earn a verified badge that builds instant trust with brands.',
   },
   {
-    icon: <Users className="h-6 w-6" />,
-    title: "Local Focus",
-    description: "Connect with creators who understand your local market and audience."
+    icon: <Zap className="h-5 w-5" />,
+    title: 'Instant brand discovery',
+    description: 'Get found by brands actively looking for creators in your niche — no cold outreach needed.',
   },
   {
-    icon: <TrendingUp className="h-6 w-6" />,
-    title: "Real Analytics",
-    description: "Track campaign performance with detailed analytics and insights."
+    icon: <Star className="h-5 w-5" />,
+    title: 'Build your reputation',
+    description: 'Showcase past work and grow your portfolio through verified brand reviews.',
+  },
+];
+
+const brandBenefits = [
+  {
+    icon: <Target className="h-5 w-5" />,
+    title: 'Find your exact niche fit',
+    description: 'Filter by niche, platform, location, and follower count to find creators who match your audience.',
   },
   {
-    icon: <MessageSquare className="h-6 w-6" />,
-    title: "Direct Communication",
-    description: "Chat directly with creators to discuss campaign details and requirements."
+    icon: <Users className="h-5 w-5" />,
+    title: 'Vetted talent only',
+    description: 'Every creator is identity-verified. No bots, no fake followers, no surprises.',
   },
   {
-    icon: <Target className="h-6 w-6" />,
-    title: "Targeted Reach",
-    description: "Find creators that match your brand values and target audience perfectly."
-  }
+    icon: <BarChart3 className="h-5 w-5" />,
+    title: 'Campaign analytics',
+    description: 'Track reach, engagement, and conversions across all your active creator campaigns in one dashboard.',
+  },
+  {
+    icon: <TrendingUp className="h-5 w-5" />,
+    title: 'Affordable campaigns',
+    description: 'Access local micro-influencers at a fraction of celebrity costs, with better engagement rates.',
+  },
 ];
 
 export function FeaturesSection() {
   return (
-    <section className="py-24 bg-background">
+    <section className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Why Choose Kreativibe?
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            The most trusted platform for connecting brands with authentic local content creators
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Built for Both Sides</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Whether you create content or need it, Kreativibe is designed to work for you
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {features.map((feature, index) => (
-            <Card key={index} className="text-center hover:shadow-medium transition-shadow">
-              <CardHeader>
-                <div className="mx-auto w-12 h-12 bg-brand-blue/10 rounded-lg flex items-center justify-center text-brand-blue mb-4">
-                  {feature.icon}
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* For Creators */}
+          <div className="rounded-3xl bg-gradient-to-br from-orange-50 to-pink-50 border border-orange-100 p-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-100 text-orange-600 text-sm font-semibold rounded-full mb-6">
+              🎬 For Creators
+            </div>
+            <h3 className="text-2xl font-bold text-foreground mb-7">Turn your content into income</h3>
+            <div className="space-y-6">
+              {creatorBenefits.map((b, i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center text-orange-500 flex-shrink-0 shadow-sm">
+                    {b.icon}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm text-foreground mb-0.5">{b.title}</div>
+                    <div className="text-sm text-muted-foreground leading-relaxed">{b.description}</div>
+                  </div>
                 </div>
-                <CardTitle className="text-xl">{feature.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-muted-foreground">
-                  {feature.description}
-                </CardDescription>
-              </CardContent>
-            </Card>
-          ))}
+              ))}
+            </div>
+          </div>
+
+          {/* For Brands */}
+          <div className="rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-brand-blue/15 text-brand-blue text-sm font-semibold rounded-full mb-6">
+              🏢 For Brands
+            </div>
+            <h3 className="text-2xl font-bold text-foreground mb-7">Find creators that drive results</h3>
+            <div className="space-y-6">
+              {brandBenefits.map((b, i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center text-brand-blue flex-shrink-0 shadow-sm">
+                    {b.icon}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm text-foreground mb-0.5">{b.title}</div>
+                    <div className="text-sm text-muted-foreground leading-relaxed">{b.description}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -1,92 +1,169 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, Play, Sparkles, Users, TrendingUp } from 'lucide-react';
+import { ArrowRight, Sparkles, CheckCircle } from 'lucide-react';
 import { Button } from '../ui';
 import { useAuth } from '../../contexts/AuthContext';
 
+const mockCreators = [
+  {
+    initials: 'SK',
+    name: 'Sarah Kimani',
+    niche: 'Fashion & Lifestyle',
+    followers: '45.2K',
+    platform: 'Instagram',
+    color: 'from-pink-400 to-rose-500',
+    verified: true,
+  },
+  {
+    initials: 'JM',
+    name: 'James Mutua',
+    niche: 'Food & Travel',
+    followers: '128K',
+    platform: 'TikTok',
+    color: 'from-violet-400 to-purple-600',
+    verified: true,
+  },
+  {
+    initials: 'AN',
+    name: 'Aisha Ndungu',
+    niche: 'Beauty & Skincare',
+    followers: '82.5K',
+    platform: 'YouTube',
+    color: 'from-orange-400 to-red-500',
+    verified: true,
+  },
+];
+
 export function HeroSection() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-brand-blue via-brand-blue to-brand-blue-dark text-white">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-black/10">
-        <div 
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-          }}
-        ></div>
-      </div>
+    <section className="relative bg-white overflow-hidden">
+      <div className="absolute top-0 right-0 w-2/3 h-full bg-gradient-to-bl from-brand-blue/5 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-brand-orange/8 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
-        <div className="text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full text-sm font-medium text-white/90 mb-8 animate-fade-in">
-            <Sparkles className="h-4 w-4 mr-2" />
-            Trusted by 500+ creators and brands
-          </div>
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+          {/* Left — copy */}
+          <div className="max-w-xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-brand-blue/10 text-brand-blue text-sm font-semibold rounded-full mb-6">
+              <Sparkles className="h-3.5 w-3.5" />
+              Africa's Content Creator Marketplace
+            </div>
 
-          {/* Main Heading */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-8 animate-slide-up">
-            Connect with
-            <span className="block text-brand-blue-light">Local Creators</span>
-          </h1>
+            <h1 className="text-5xl lg:text-[3.5rem] font-extrabold text-foreground leading-[1.1] tracking-tight mb-5">
+              Where brands meet{' '}
+              <span className="text-brand-blue">their perfect</span>{' '}
+              creator match
+            </h1>
 
-          {/* Subheading */}
-          <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-12 leading-relaxed animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            Transform your marketing with authentic content from trusted local voices. 
-            Affordable, effective campaigns that resonate with your audience.
-          </p>
+            <p className="text-lg text-muted-foreground leading-relaxed mb-8">
+              Kreativibe connects businesses with verified local content creators across Instagram, TikTok, YouTube and more. Real people, authentic content, measurable results.
+            </p>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16 animate-slide-up" style={{ animationDelay: '0.2s' }}>
             {isAuthenticated ? (
               <Link href="/dashboard">
-                <Button size="xl" className="bg-white text-brand-blue hover:bg-gray-100 shadow-lg">
-                  Go to Dashboard
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                <Button size="xl" variant="brand">
+                  Go to Dashboard <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
             ) : (
-              <>
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Link href="/auth/signup">
-                  <Button size="xl" className="bg-white text-brand-blue hover:bg-gray-100 shadow-lg">
-                    Get Started Free
-                    <ArrowRight className="ml-2 h-5 w-5" />
+                  <Button size="xl" variant="brand">
+                    I'm a Brand <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
-                <Link href="/marketplace">
-                  <Button size="xl" variant="outline" className="border-white text-white hover:bg-white hover:text-brand-blue">
-                    <Play className="mr-2 h-5 w-5" />
-                    Browse Creators
+                <Link href="/auth/signup">
+                  <Button size="xl" variant="outline">
+                    I'm a Creator
                   </Button>
                 </Link>
-              </>
+              </div>
             )}
+
+            <div className="mt-8 flex flex-wrap items-center gap-6">
+              <div className="flex items-center gap-3">
+                <div className="flex -space-x-2.5">
+                  {['SK', 'JM', 'AN', 'TL', 'RB'].map((init, i) => (
+                    <div
+                      key={i}
+                      className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-blue to-brand-blue-light border-2 border-white flex items-center justify-center text-white text-xs font-bold"
+                    >
+                      {init[0]}
+                    </div>
+                  ))}
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  <strong className="text-foreground">500+</strong> creators joined
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                Free to join
+              </div>
+            </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-brand-blue-light mb-2">500+</div>
-              <div className="text-white/80">Active Creators</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-brand-blue-light mb-2">200+</div>
-              <div className="text-white/80">Brand Partners</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-brand-blue-light mb-2">10K+</div>
-              <div className="text-white/80">Campaigns Delivered</div>
+          {/* Right — creator cards */}
+          <div className="relative hidden lg:flex flex-col gap-4 pt-6">
+            {mockCreators.map((c, i) => (
+              <div
+                key={i}
+                className={`flex items-center gap-4 bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.08)] border border-border/50 p-4 transition-transform hover:-translate-y-0.5 ${
+                  i === 1 ? 'ml-10' : i === 2 ? 'ml-5' : ''
+                }`}
+              >
+                <div
+                  className={`w-12 h-12 rounded-xl bg-gradient-to-br ${c.color} flex-shrink-0 flex items-center justify-center text-white font-bold text-base`}
+                >
+                  {c.initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-sm text-foreground">{c.name}</span>
+                    {c.verified && (
+                      <div className="w-4 h-4 bg-brand-blue rounded-full flex items-center justify-center flex-shrink-0">
+                        <CheckCircle className="h-3 w-3 text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{c.niche}</div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="font-bold text-sm text-foreground">{c.followers}</div>
+                  <div className="text-xs text-muted-foreground">{c.platform}</div>
+                </div>
+              </div>
+            ))}
+
+            <div className="absolute -bottom-2 -left-6 bg-white rounded-xl shadow-[0_2px_16px_rgba(0,0,0,0.12)] border border-border/60 px-4 py-3 flex items-center gap-3">
+              <div className="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-foreground">New deal closed</div>
+                <div className="text-xs text-muted-foreground">KES 65,000 campaign</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Bottom Gradient Fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent"></div>
+        {/* Stats bar */}
+        <div className="mt-16 pt-10 border-t border-border grid grid-cols-3 gap-6">
+          {[
+            { value: '500+', label: 'Verified Creators' },
+            { value: '200+', label: 'Brand Partners' },
+            { value: '10K+', label: 'Campaigns Delivered' },
+          ].map((s) => (
+            <div key={s.label} className="text-center">
+              <div className="text-3xl font-extrabold text-brand-blue">{s.value}</div>
+              <div className="text-sm text-muted-foreground mt-1">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
