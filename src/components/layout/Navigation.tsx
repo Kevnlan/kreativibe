@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState } from 'react';
 import { Menu, X, User, LogOut, Settings } from 'lucide-react';
 import { Button, Avatar, Badge } from '../ui';
@@ -23,14 +24,11 @@ export function Navigation() {
 
   return (
     <nav className="bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-8 lg:px-14 xl:px-20">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <div className="w-8 h-8 bg-gradient-to-r from-brand-blue to-brand-blue-light rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">K</span>
-            </div>
-            <span className="ml-2 text-xl font-bold text-foreground">Kreativibe</span>
+            <Image src="/logo.png" alt="Kreativibe" width={160} height={48} className="h-10 w-auto" />
           </Link>
 
           {/* Desktop Navigation */}

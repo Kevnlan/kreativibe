@@ -6,7 +6,7 @@ import { ArrowRight, Camera, Building2 } from 'lucide-react';
 export function CTASection() {
   return (
     <section className="py-24 bg-brand-blue">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div className="w-full px-4 sm:px-8 lg:px-14 xl:px-20 text-center">
         <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-4">
           Ready to grow with authentic content?
         </h2>

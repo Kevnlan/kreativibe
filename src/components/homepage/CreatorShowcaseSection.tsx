@@ -16,7 +16,7 @@ const creators = [
 export function CreatorShowcaseSection() {
   return (
     <section className="py-24 bg-muted/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-8 lg:px-14 xl:px-20">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-6">
           <div>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">Meet Our Creators</h2>

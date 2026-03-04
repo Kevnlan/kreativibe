@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 
 const links = {
   Platform: [
@@ -26,15 +27,12 @@ const links = {
 export function Footer() {
   return (
     <footer className="bg-foreground text-background/70 py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-4 sm:px-8 lg:px-14 xl:px-20">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="inline-flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-brand-blue rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-base">K</span>
-              </div>
-              <span className="text-white font-bold text-xl">Kreativibe</span>
+            <Link href="/" className="inline-flex items-center mb-4">
+              <Image src="/logo_blue.png" alt="Kreativibe" width={160} height={48} className="h-10 w-auto" />
             </Link>
             <p className="text-sm leading-relaxed text-background/50">
               Africa's content creator marketplace. Connecting brands and creators for authentic, results-driven campaigns.
@@ -59,7 +57,7 @@ export function Footer() {
 
         <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-xs text-background/35">© 2025 Kreativibe. All rights reserved.</p>
-          <p className="text-xs text-background/35">Made with ❤️ in Kenya</p>
+          {/* <p className="text-xs text-background/35">Made with ❤️ in Kenya</p> */}
         </div>
       </div>
     </footer>

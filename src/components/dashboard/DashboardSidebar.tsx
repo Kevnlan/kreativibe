@@ -12,9 +12,11 @@ import {
   Users,
   ShoppingBag,
   BarChart3,
-  Shield
+  Shield,
+  LogOut
 } from 'lucide-react';
-import { useUserRole, useUser } from '../../contexts/AuthContext';
+import { useUserRole, useUser, useAuth } from '../../contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 import { Avatar, Badge } from '../ui';
 
 interface SidebarItem {
@@ -118,6 +120,13 @@ export function DashboardSidebar() {
   const pathname = usePathname();
   const userRole = useUserRole();
   const user = useUser();
+  const { logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
+  };
 
   const filteredItems = sidebarItems.filter(item => 
     !item.roles || item.roles.includes(userRole as any)
@@ -190,6 +199,17 @@ export function DashboardSidebar() {
             Help & Support
           </Link>
         </div>
+      </div>
+
+      {/* Logout */}
+      <div className="mt-4 pt-4 border-t border-border">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Log Out</span>
+        </button>
       </div>
     </div>
   );

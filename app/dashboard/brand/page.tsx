@@ -42,7 +42,7 @@ export default function BrandDashboard() {
     });
   }, []);
 
-  if (!brandProfile || !user) {
+  if (!user) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue"></div>
@@ -114,7 +114,7 @@ export default function BrandDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">
-            {brandProfile.companyName} Dashboard
+            {brandProfile?.companyName || user.name} Dashboard
           </h1>
           <p className="text-muted-foreground mt-2">
             Manage your campaigns and track performance
