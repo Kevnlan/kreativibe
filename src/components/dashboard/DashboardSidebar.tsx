@@ -13,7 +13,10 @@ import {
   ShoppingBag,
   BarChart3,
   Shield,
-  LogOut
+  LogOut,
+  MessageSquare,
+  Settings,
+  Globe
 } from 'lucide-react';
 import { useUserRole, useUser, useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -23,7 +26,7 @@ interface SidebarItem {
   name: string;
   href: string;
   icon: React.ReactNode;
-  roles?: ('CREATOR' | 'BRAND' | 'ADMIN')[];
+  roles?: ('CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT')[];
 }
 
 const sidebarItems: SidebarItem[] = [
@@ -44,6 +47,24 @@ const sidebarItems: SidebarItem[] = [
     name: 'My Posts',
     href: '/dashboard/creative/posts',
     icon: <FileText className="h-4 w-4" />,
+    roles: ['CREATOR'],
+  },
+  {
+    name: 'Wallet',
+    href: '/dashboard/creative/wallet',
+    icon: <Wallet className="h-4 w-4" />,
+    roles: ['CREATOR'],
+  },
+  {
+    name: 'Earnings',
+    href: '/dashboard/creative/earnings',
+    icon: <TrendingUp className="h-4 w-4" />,
+    roles: ['CREATOR'],
+  },
+  {
+    name: 'Withdrawals',
+    href: '/dashboard/creative/withdrawals',
+    icon: <Wallet className="h-4 w-4" />,
     roles: ['CREATOR'],
   },
   {
@@ -109,10 +130,29 @@ const sidebarItems: SidebarItem[] = [
     roles: ['ADMIN'],
   },
   {
+    name: 'Countries',
+    href: '/dashboard/admin/countries',
+    icon: <Globe className="h-4 w-4" />,
+    roles: ['ADMIN'],
+  },
+  {
     name: 'System Settings',
     href: '/dashboard/admin/settings',
     icon: <Shield className="h-4 w-4" />,
     roles: ['ADMIN'],
+  },
+  // Support Agent
+  {
+    name: 'Support',
+    href: '/dashboard/support',
+    icon: <MessageSquare className="h-4 w-4" />,
+    roles: ['SUPPORT_AGENT', 'ADMIN'],
+  },
+  // Settings (all users)
+  {
+    name: 'Settings',
+    href: '/dashboard/settings/security',
+    icon: <Settings className="h-4 w-4" />,
   },
 ];
 

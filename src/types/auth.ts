@@ -2,7 +2,8 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'CREATOR' | 'BRAND' | 'ADMIN';
+  role: 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT';
+  countryId: string;
   avatar?: string;
   isEmailVerified: boolean;
   createdAt: string;

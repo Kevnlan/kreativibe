@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, Mail, Lock, User, Camera, Building2, CheckCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button, Input } from '@/components/ui';
+import { Button, Input, CountrySelector } from '@/components/ui';
 import { cn } from '@/lib/utils';
 
 const signupSchema = z.object({
@@ -17,6 +17,7 @@ const signupSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string().min(6, 'Please confirm your password'),
   role: z.enum(['CREATOR', 'BRAND'], { message: 'Please select an account type' }),
+  countryId: z.string().min(1, 'Please select your country'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
@@ -77,7 +78,7 @@ export default function SignupPage() {
     setIsLoading(true);
     setError(null);
     try {
-      await signup(data.email, data.password, data.name, data.role);
+      await signup(data.email, data.password, data.name, data.role, data.countryId);
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Please try again.');
@@ -234,6 +235,18 @@ export default function SignupPage() {
               {...register('email')}
               disabled={isLoading}
             />
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Country
+              </label>
+              <CountrySelector
+                value={watch('countryId')}
+                onChange={(countryId) => setValue('countryId', countryId)}
+                error={errors.countryId?.message}
+                disabled={isLoading}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <Input
