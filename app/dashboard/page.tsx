@@ -25,6 +25,9 @@ export default function DashboardPage() {
           case 'ADMIN':
             router.push('/dashboard/admin');
             break;
+          case 'SUPPORT_AGENT':
+            router.push('/dashboard/support-agent');
+            break;
           default:
             router.push('/auth/login');
         }

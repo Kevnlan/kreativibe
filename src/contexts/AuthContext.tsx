@@ -42,17 +42,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setState(prev => ({ ...prev, brandProfile }));
   };
 
-  const buildMockUser = (email: string, role: 'CREATOR' | 'BRAND'): User => ({
+  const buildMockUser = (email: string, role: 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT'): User => ({
     id: `mock-${role.toLowerCase()}-1`,
     email,
     name: email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
     role,
+    countryId: 'kenya-001',
     isEmailVerified: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
 
-  const login = async (email: string, password: string, role: 'CREATOR' | 'BRAND' = 'BRAND'): Promise<void> => {
+  const login = async (email: string, password: string, role: 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT' = 'BRAND'): Promise<void> => {
     setLoading(true);
     try {
       const response = await apiClient.login(email, password);
@@ -70,7 +71,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const signup = async (email: string, password: string, name: string, role: 'CREATOR' | 'BRAND', countryId?: string): Promise<void> => {
+  const signup = async (email: string, password: string, name: string, role: 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT', countryId?: string): Promise<void> => {
     setLoading(true);
     try {
       const response = await apiClient.signup(email, password, name, role, countryId);
@@ -217,7 +218,7 @@ export function useIsLoading(): boolean {
   return isLoading;
 }
 
-export function useUserRole(): 'CREATOR' | 'BRAND' | 'ADMIN' | null {
+export function useUserRole(): 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT' | null {
   const { user } = useAuth();
   return user?.role || null;
 }

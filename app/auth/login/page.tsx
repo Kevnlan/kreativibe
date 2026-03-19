@@ -30,7 +30,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [role, setRole] = useState<'CREATOR' | 'BRAND'>('BRAND');
+  const [role, setRole] = useState<'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT'>('BRAND');
   const router = useRouter();
   const { login } = useAuth();
 
@@ -204,6 +204,28 @@ export default function LoginPage() {
                   }`}
                 >
                   🎬 Creator
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('ADMIN')}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border-2 text-sm font-semibold transition-colors ${
+                    role === 'ADMIN'
+                      ? 'border-purple-500 bg-purple-50 text-purple-600'
+                      : 'border-border text-muted-foreground hover:border-purple-400/40'
+                  }`}
+                >
+                  👑 Admin
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('SUPPORT_AGENT')}
+                  className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border-2 text-sm font-semibold transition-colors ${
+                    role === 'SUPPORT_AGENT'
+                      ? 'border-green-500 bg-green-50 text-green-600'
+                      : 'border-border text-muted-foreground hover:border-green-400/40'
+                  }`}
+                >
+                  💬 Support
                 </button>
               </div>
             </div>

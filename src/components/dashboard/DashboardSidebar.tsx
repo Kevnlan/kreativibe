@@ -44,6 +44,12 @@ const sidebarItems: SidebarItem[] = [
   },
   // Creator
   {
+    name: 'My Content',
+    href: '/dashboard/creative/content',
+    icon: <FileText className="h-4 w-4" />,
+    roles: ['CREATOR'],
+  },
+  {
     name: 'My Posts',
     href: '/dashboard/creative/posts',
     icon: <FileText className="h-4 w-4" />,
@@ -84,6 +90,24 @@ const sidebarItems: SidebarItem[] = [
     name: 'Marketplace',
     href: '/marketplace',
     icon: <ShoppingBag className="h-4 w-4" />,
+    roles: ['BRAND'],
+  },
+  {
+    name: 'Wallet',
+    href: '/dashboard/brand/wallet',
+    icon: <Wallet className="h-4 w-4" />,
+    roles: ['BRAND'],
+  },
+  {
+    name: 'Purchases',
+    href: '/dashboard/brand/purchases',
+    icon: <ShoppingBag className="h-4 w-4" />,
+    roles: ['BRAND'],
+  },
+  {
+    name: 'Social Media',
+    href: '/dashboard/brand/social',
+    icon: <Users className="h-4 w-4" />,
     roles: ['BRAND'],
   },
   {

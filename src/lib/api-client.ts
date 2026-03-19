@@ -157,7 +157,7 @@ class ApiClient {
     }
   }
 
-  async signup(email: string, password: string, name: string, role: 'CREATOR' | 'BRAND', countryId?: string): Promise<AuthResponse> {
+  async signup(email: string, password: string, name: string, role: 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT', countryId?: string): Promise<AuthResponse> {
     try {
       const response = await this.client.post('/auth/register', {
         email,
