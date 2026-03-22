@@ -17,6 +17,7 @@ import { Button } from '@/components/ui';
 import { Input } from '@/components/ui';
 import { useBrandProfile, useUser } from '@/contexts/AuthContext';
 import { formatCurrency, formatNumber } from '@/lib/utils';
+import { KYCBanner } from '@/components/dashboard/KYCBanner';
 
 export default function BrandDashboard() {
   const brandProfile = useBrandProfile();
@@ -109,7 +110,13 @@ export default function BrandDashboard() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* KYC Completion Banner */}
+      <KYCBanner 
+        userRole="BRAND" 
+        isKYCComplete={false} 
+      />
+      
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>

@@ -16,7 +16,8 @@ import {
   LogOut,
   MessageSquare,
   Settings,
-  Globe
+  Globe,
+  Folder
 } from 'lucide-react';
 import { useUserRole, useUser, useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';

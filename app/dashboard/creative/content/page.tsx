@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Image as ImageIcon, Video, Music, Package, Eye, Edit, Trash2, Copy } from 'lucide-react';
+import { Plus, Image as ImageIcon, Video, Music, Package, Eye, Edit, Trash2, Copy, Sparkles } from 'lucide-react';
 import { Button, DataTable, StatCard, StatusBadge, Input, EmptyState } from '@/components/ui';
 import { Content, ContentStatus, ContentType } from '@/types/api-contracts/content.types';
 import { useRouter } from 'next/navigation';
@@ -330,10 +330,16 @@ export default function ContentManagementPage() {
             Manage and track your uploaded content
           </p>
         </div>
-        <Button onClick={() => router.push('/dashboard/creative/content/new')}>
-          <Plus className="h-4 w-4 mr-2" />
-          Upload Content
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => router.push('/dashboard/creative/content/optimize')}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            AI Advisor
+          </Button>
+          <Button onClick={() => router.push('/dashboard/creative/content/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Upload Content
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}

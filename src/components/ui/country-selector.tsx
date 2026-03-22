@@ -98,8 +98,8 @@ export function CountrySelector({
             className="fixed inset-0 z-10"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute z-20 w-full mt-2 bg-background border border-border rounded-lg shadow-lg overflow-hidden">
-            <div className="max-h-60 overflow-y-auto">
+          <div className="absolute z-20 w-full mt-2 bg-white border border-border rounded-lg shadow-lg overflow-hidden">
+            <div className="max-h-60 overflow-y-auto bg-white">
               {countries.map((country) => (
                 <button
                   key={country.id}

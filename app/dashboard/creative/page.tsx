@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui';
 import { useCreatorProfile, useUser } from '@/contexts/AuthContext';
 import { formatCurrency, formatNumber } from '@/lib/utils';
+import { KYCBanner } from '@/components/dashboard/KYCBanner';
 
 export default function CreatorDashboard() {
   const creatorProfile = useCreatorProfile();
@@ -81,8 +82,13 @@ export default function CreatorDashboard() {
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
+    <div className="space-y-6">
+      {/* KYC Completion Banner */}
+      <KYCBanner 
+        userRole="CREATOR" 
+        isKYCComplete={false} 
+      />
+      
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">

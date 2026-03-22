@@ -116,7 +116,7 @@ export default function CampaignsPage() {
           <h1 className="text-2xl font-bold text-foreground">Campaigns</h1>
           <p className="text-muted-foreground mt-1">Manage all your influencer marketing campaigns</p>
         </div>
-        <Button variant="brand">
+        <Button variant="brand" onClick={() => window.location.href = '/dashboard/brand/campaigns/new'}>
           <Plus className="h-4 w-4 mr-2" />
           New Campaign
         </Button>

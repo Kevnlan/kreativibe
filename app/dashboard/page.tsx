@@ -12,6 +12,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isLoading) {
       if (!userRole) {
+        // Redirect to brand/creator login by default
         router.push('/auth/login');
       } else {
         // Redirect based on user role

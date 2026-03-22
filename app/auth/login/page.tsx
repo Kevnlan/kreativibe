@@ -30,7 +30,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [role, setRole] = useState<'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT'>('BRAND');
+  const [role, setRole] = useState<'CREATOR' | 'BRAND'>('CREATOR');
   const router = useRouter();
   const { login } = useAuth();
 
@@ -192,7 +192,7 @@ export default function LoginPage() {
                       : 'border-border text-muted-foreground hover:border-brand-blue/40'
                   }`}
                 >
-                  🏢 Brand
+                  Brand
                 </button>
                 <button
                   type="button"
@@ -203,29 +203,7 @@ export default function LoginPage() {
                       : 'border-border text-muted-foreground hover:border-orange-400/40'
                   }`}
                 >
-                  🎬 Creator
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('ADMIN')}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border-2 text-sm font-semibold transition-colors ${
-                    role === 'ADMIN'
-                      ? 'border-purple-500 bg-purple-50 text-purple-600'
-                      : 'border-border text-muted-foreground hover:border-purple-400/40'
-                  }`}
-                >
-                  👑 Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('SUPPORT_AGENT')}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border-2 text-sm font-semibold transition-colors ${
-                    role === 'SUPPORT_AGENT'
-                      ? 'border-green-500 bg-green-50 text-green-600'
-                      : 'border-border text-muted-foreground hover:border-green-400/40'
-                  }`}
-                >
-                  💬 Support
+                  Creator
                 </button>
               </div>
             </div>
@@ -235,16 +213,34 @@ export default function LoginPage() {
             </Button>
           </form>
 
-
-          <p className="mt-8 text-center text-sm text-muted-foreground">
-            Don't have an account?{' '}
-            <Link
-              href="/auth/signup"
-              className="font-semibold text-brand-blue hover:text-brand-blue-dark transition-colors"
-            >
-              Sign up free
-            </Link>
-          </p>
+          <div className="mt-8">
+            <p className="text-sm text-muted-foreground text-center">
+              Don't have an account?{' '}
+              <Link href="/auth/signup" className="text-brand-blue hover:underline font-medium">
+                Sign up
+              </Link>
+            </p>
+            
+            {/* Admin & Support Links */}
+            <div className="mt-6 pt-6 border-t border-border space-y-2">
+              <p className="text-xs text-muted-foreground text-center mb-3">Staff Access</p>
+              <div className="flex gap-3 justify-center">
+                <Link 
+                  href="/admin/login" 
+                  className="text-xs text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
+                >
+                  Admin Portal →
+                </Link>
+                <span className="text-xs text-muted-foreground">|</span>
+                <Link 
+                  href="/support/login" 
+                  className="text-xs text-green-600 hover:text-green-700 font-medium flex items-center gap-1"
+                >
+                  Support Portal →
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

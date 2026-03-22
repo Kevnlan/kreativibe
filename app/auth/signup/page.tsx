@@ -79,7 +79,14 @@ export default function SignupPage() {
     setError(null);
     try {
       await signup(data.email, data.password, data.name, data.role, data.countryId);
-      router.push('/dashboard');
+      // Redirect to onboarding based on role
+      if (data.role === 'CREATOR') {
+        router.push('/onboarding/creator');
+      } else if (data.role === 'BRAND') {
+        router.push('/onboarding/brand');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Please try again.');
     } finally {
