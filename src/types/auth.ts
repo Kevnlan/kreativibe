@@ -64,7 +64,7 @@ export interface AuthState {
 }
 
 export interface AuthContextType extends AuthState {
-  login: (email: string, password: string, role?: 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT') => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string, role: 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT', countryId?: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;

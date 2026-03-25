@@ -215,20 +215,23 @@ export default function ContentManagementPage() {
     {
       key: 'metadata.platforms',
       label: 'Platforms',
-      render: (value: string[]) => (
-        <div className="flex flex-wrap gap-1">
-          {value.slice(0, 2).map((platform) => (
-            <span key={platform} className="text-xs px-2 py-1 bg-muted rounded">
-              {platform}
-            </span>
-          ))}
-          {value.length > 2 && (
-            <span className="text-xs px-2 py-1 bg-muted rounded">
-              +{value.length - 2}
-            </span>
-          )}
-        </div>
-      ),
+      render: (_value: string[], row: Content) => {
+        const platforms = row.metadata?.platforms || [];
+        return (
+          <div className="flex flex-wrap gap-1">
+            {platforms.slice(0, 2).map((platform) => (
+              <span key={platform} className="text-xs px-2 py-1 bg-muted rounded">
+                {platform}
+              </span>
+            ))}
+            {platforms.length > 2 && (
+              <span className="text-xs px-2 py-1 bg-muted rounded">
+                +{platforms.length - 2}
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'price',

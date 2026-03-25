@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useIsLoading } from '@/contexts/AuthContext';
 import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
+import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 
 export default function DashboardLayout({
   children,
@@ -36,9 +37,12 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-background">
       <div className="flex">
         <DashboardSidebar />
-        <main className="flex-1 p-6 lg:p-8">
-          {children}
-        </main>
+        <div className="flex-1 flex flex-col">
+          <DashboardHeader />
+          <main className="flex-1 p-6 lg:p-8">
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Image as ImageIcon, Video, Music, Package } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, Video, Music, Package, Save, Send, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button, Input, Card, CardContent, MultiStepWizard } from '@/components/ui';
 import { ImageUploader } from '@/components/content/ImageUploader';
 import { VideoUploader } from '@/components/content/VideoUploader';
@@ -97,39 +97,49 @@ export default function NewContentPage() {
     setPreviews(newPreviews);
   };
 
-  const handleComplete = async () => {
-    if (!user) return;
+  const buildContentData = (status: 'DRAFT' | 'SUBMITTED'): CreateContentData => ({
+    type: contentType,
+    format,
+    metadata: {
+      title,
+      description,
+      category,
+      platforms,
+      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      brand: brand || undefined,
+    },
+    mediaUrls: previews,
+    coverImage: previews[0],
+    thumbnailUrl: previews[0],
+    price,
+    currency,
+  });
 
+  const handleSaveDraft = async () => {
+    if (!user) return;
     setIsSubmitting(true);
     try {
-      // Mock content creation
-      const contentData: CreateContentData = {
-        type: contentType,
-        format,
-        metadata: {
-          title,
-          description,
-          category,
-          platforms,
-          tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-          brand: brand || undefined,
-        },
-        mediaUrls: previews, // Using preview URLs as mock media URLs
-        coverImage: previews[0],
-        thumbnailUrl: previews[0],
-        price,
-        currency,
-      };
+      const contentData = buildContentData('DRAFT');
+      console.log('Saving draft:', contentData);
+      await new Promise(resolve => setTimeout(resolve, 800));
+      router.push('/dashboard/creative/content?draft=true');
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-      // In real implementation, this would call contentService.createContent
-      console.log('Creating content:', contentData);
-
-      // Simulate API delay
+  const handleComplete = async () => {
+    if (!user) return;
+    setIsSubmitting(true);
+    try {
+      const contentData = buildContentData('SUBMITTED');
+      console.log('Submitting for review:', contentData);
       await new Promise(resolve => setTimeout(resolve, 1000));
-
       router.push('/dashboard/creative/content?success=true');
     } catch (error) {
-      console.error('Failed to create content:', error);
+      console.error('Failed to submit content:', error);
     } finally {
       setIsSubmitting(false);
     }
@@ -439,6 +449,60 @@ export default function NewContentPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Submit Options */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={isSubmitting}
+                className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border hover:border-yellow-400 hover:bg-yellow-50 transition-all text-left"
+              >
+                <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center">
+                  <Save className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div className="text-center">
+                  <h3 className="font-semibold text-foreground">Save as Draft</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Save your progress and come back later to finish editing before publishing.
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleComplete}
+                disabled={isSubmitting}
+                className="flex flex-col items-center gap-3 p-6 rounded-xl border-2 border-border hover:border-green-400 hover:bg-green-50 transition-all text-left"
+              >
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <Send className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="text-center">
+                  <h3 className="font-semibold text-foreground">Submit for Review</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Submit your content for moderation. Once approved, it will be visible in the marketplace.
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            {/* Status Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex gap-3">
+                <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-blue-900 text-sm mb-1">Content Review Process</h4>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5" /> <strong>Draft</strong> — Saved but not yet submitted</li>
+                    <li className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5" /> <strong>Submitted</strong> — Sent for platform review</li>
+                    <li className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5" /> <strong>Under Review</strong> — Being reviewed by our team</li>
+                    <li className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5" /> <strong>Approved</strong> — Live in the marketplace</li>
+                    <li className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5" /> <strong>Sold</strong> — Purchased by a brand</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       ),

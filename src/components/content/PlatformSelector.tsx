@@ -9,15 +9,15 @@ interface PlatformSelectorProps {
   contentType?: 'IMAGE' | 'VIDEO' | 'AUDIO' | 'BRAND_ASSET';
 }
 
-const PLATFORM_OPTIONS: { value: Platform; label: string; icon: string; color: string }[] = [
-  { value: 'INSTAGRAM', label: 'Instagram', icon: '📷', color: 'bg-pink-100 text-pink-700 border-pink-300' },
-  { value: 'TIKTOK', label: 'TikTok', icon: '🎵', color: 'bg-black text-white border-black' },
-  { value: 'YOUTUBE', label: 'YouTube', icon: '▶️', color: 'bg-red-100 text-red-700 border-red-300' },
-  { value: 'FACEBOOK', label: 'Facebook', icon: '👍', color: 'bg-blue-100 text-blue-700 border-blue-300' },
-  { value: 'TWITTER', label: 'Twitter/X', icon: '🐦', color: 'bg-sky-100 text-sky-700 border-sky-300' },
-  { value: 'RADIO', label: 'Radio', icon: '📻', color: 'bg-purple-100 text-purple-700 border-purple-300' },
-  { value: 'PRINT', label: 'Print', icon: '🖨️', color: 'bg-gray-100 text-gray-700 border-gray-300' },
-  { value: 'DIGITAL', label: 'Digital', icon: '💻', color: 'bg-green-100 text-green-700 border-green-300' },
+const PLATFORM_OPTIONS: { value: Platform; label: string; color: string }[] = [
+  { value: 'INSTAGRAM', label: 'Instagram', color: 'bg-pink-100 text-pink-700 border-pink-300' },
+  { value: 'TIKTOK', label: 'TikTok', color: 'bg-black text-white border-black' },
+  { value: 'YOUTUBE', label: 'YouTube', color: 'bg-red-100 text-red-700 border-red-300' },
+  { value: 'FACEBOOK', label: 'Facebook', color: 'bg-blue-100 text-blue-700 border-blue-300' },
+  { value: 'TWITTER', label: 'Twitter/X', color: 'bg-sky-100 text-sky-700 border-sky-300' },
+  { value: 'RADIO', label: 'Radio', color: 'bg-purple-100 text-purple-700 border-purple-300' },
+  { value: 'PRINT', label: 'Print', color: 'bg-gray-100 text-gray-700 border-gray-300' },
+  { value: 'DIGITAL', label: 'Digital', color: 'bg-green-100 text-green-700 border-green-300' },
 ];
 
 export function PlatformSelector({ selected, onChange, contentType }: PlatformSelectorProps) {
@@ -61,10 +61,7 @@ export function PlatformSelector({ selected, onChange, contentType }: PlatformSe
                   : 'bg-white border-border hover:border-brand-blue/50'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <span className="text-xl">{platform.icon}</span>
-                <span className="text-sm font-medium">{platform.label}</span>
-              </div>
+              <span className="text-sm font-medium">{platform.label}</span>
             </button>
           );
         })}

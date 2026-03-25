@@ -1,278 +1,431 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Send, Sparkles, ArrowLeft, CheckCircle, Loader2 } from 'lucide-react';
-import { Button, Card, CardContent } from '@/components/ui';
-
-interface Message {
-  id: string;
-  role: 'assistant' | 'user';
-  content: string;
-  timestamp: Date;
-}
+import { ArrowLeft, ArrowRight, CheckCircle, Target, Users, Megaphone, Clock, FileText } from 'lucide-react';
+import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, Input } from '@/components/ui';
+import { cn } from '@/lib/utils';
 
 interface CampaignData {
-  name?: string;
-  objective?: string;
-  audience?: string;
-  budget?: number;
-  platforms?: string[];
-  contentTypes?: string[];
-  duration?: string;
-  messaging?: string;
+  name: string;
+  objective: string;
+  audience: string;
+  budget: string;
+  platforms: string[];
+  contentTypes: string[];
+  duration: string;
+  startDate: string;
+  messaging: string;
+  tone: string;
 }
+
+const PLATFORMS = ['Instagram', 'TikTok', 'YouTube', 'Facebook', 'Radio', 'Print'];
+const CONTENT_TYPES = ['Product Reviews', 'Lifestyle Content', 'Tutorials', 'Behind-the-Scenes', 'Testimonials', 'Brand Stories'];
+const OBJECTIVES = ['Brand Awareness', 'Product Launch', 'Sales & Conversions', 'Engagement', 'Event Promotion', 'Content Creation'];
+const TONES = ['Fun & Energetic', 'Professional & Trustworthy', 'Authentic & Relatable', 'Bold & Edgy', 'Warm & Friendly', 'Luxury & Premium'];
+
+const STEPS = [
+  { id: 1, label: 'Objective', icon: Target },
+  { id: 2, label: 'Audience & Budget', icon: Users },
+  { id: 3, label: 'Platforms & Content', icon: Megaphone },
+  { id: 4, label: 'Duration & Messaging', icon: Clock },
+  { id: 5, label: 'Review & Create', icon: FileText },
+];
 
 export default function NewCampaignPage() {
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: "Hi! 👋 I'm your AI campaign assistant. I'll help you create a tailored content campaign. Let's start with the basics - what's the main goal of this campaign?",
-      timestamp: new Date(),
-    },
-  ]);
-  const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [campaignData, setCampaignData] = useState<CampaignData>({});
   const [step, setStep] = useState(1);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [data, setData] = useState<CampaignData>({
+    name: '',
+    objective: '',
+    audience: '',
+    budget: '',
+    platforms: [],
+    contentTypes: [],
+    duration: '',
+    startDate: '',
+    messaging: '',
+    tone: '',
+  });
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const updateField = (field: keyof CampaignData, value: string | string[]) => {
+    setData(prev => ({ ...prev, [field]: value }));
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+  const toggleArrayItem = (field: 'platforms' | 'contentTypes', item: string) => {
+    setData(prev => {
+      const arr = prev[field];
+      return { ...prev, [field]: arr.includes(item) ? arr.filter(i => i !== item) : [...arr, item] };
+    });
+  };
 
-  const generateAIResponse = async (userMessage: string, currentStep: number): Promise<string> => {
-    // Mock AI responses based on conversation flow
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    switch (currentStep) {
-      case 1:
-        // After objective
-        return "Great! Now, who is your target audience? For example: 'Young professionals in Nairobi aged 25-35' or 'Fitness enthusiasts across Kenya'.";
-      
-      case 2:
-        // After audience
-        return "Perfect! What's your estimated budget for this campaign in KES? This will help me recommend the right content packages and number of creators.";
-      
-      case 3:
-        // After budget
-        return "Excellent! Which platforms do you want to focus on? You can choose multiple:\n\n• Instagram (Reels, Posts, Stories)\n• TikTok (Short videos)\n• YouTube (Long-form videos)\n• Facebook (Posts, Videos)\n• Radio (Audio ads)\n• Print (Designs, posters)\n\nJust list the platforms you're interested in.";
-      
-      case 4:
-        // After platforms
-        return "Awesome! What type of content would work best for your campaign? For example:\n\n• Product reviews/unboxing\n• Lifestyle integration\n• Tutorial/How-to content\n• Behind-the-scenes\n• User testimonials\n• Brand storytelling\n\nTell me what resonates with your brand.";
-      
-      case 5:
-        // After content type
-        return "How long should this campaign run? For example: '2 weeks', '1 month', '3 months', or specific dates.";
-      
-      case 6:
-        // After duration
-        return "Last question! What's the key message or tone you want to convey? For example: 'Fun and energetic', 'Professional and trustworthy', 'Authentic and relatable'.";
-      
-      case 7:
-        // Generate campaign summary
-        const budget = campaignData.budget || 0;
-        const suggestedCreators = Math.ceil(budget / 5000);
-        const suggestedContent = Math.ceil(budget / 3500);
-        
-        return `Perfect! 🎉 Based on our conversation, here's your campaign brief:\n\n**Campaign Overview:**\n• Objective: ${campaignData.objective}\n• Target Audience: ${campaignData.audience}\n• Budget: KES ${budget.toLocaleString()}\n• Platforms: ${campaignData.platforms?.join(', ')}\n• Duration: ${campaignData.duration}\n• Messaging: ${campaignData.messaging}\n\n**My Recommendations:**\n• Engage ${suggestedCreators}-${suggestedCreators + 2} creators\n• Commission ${suggestedContent}-${suggestedContent + 3} pieces of content\n• Mix of ${campaignData.contentTypes?.join(' and ')}\n• Estimated reach: ${(suggestedCreators * 50000).toLocaleString()}+ people\n\nReady to create this campaign and invite creators?`;
-      
-      default:
-        return "I'm here to help! Please share more details about your campaign.";
+  const canNext = (): boolean => {
+    switch (step) {
+      case 1: return !!data.name.trim() && !!data.objective;
+      case 2: return !!data.audience.trim() && !!data.budget.trim();
+      case 3: return data.platforms.length > 0 && data.contentTypes.length > 0;
+      case 4: return !!data.duration.trim() && !!data.messaging.trim();
+      default: return true;
     }
   };
 
-  const extractCampaignData = (userMessage: string, currentStep: number) => {
-    const updated = { ...campaignData };
-
-    switch (currentStep) {
-      case 1:
-        updated.objective = userMessage;
-        updated.name = userMessage.slice(0, 50);
-        break;
-      case 2:
-        updated.audience = userMessage;
-        break;
-      case 3:
-        const budgetMatch = userMessage.match(/\d+/);
-        if (budgetMatch) {
-          updated.budget = parseInt(budgetMatch[0]);
-        }
-        break;
-      case 4:
-        const platforms = [];
-        if (/instagram/i.test(userMessage)) platforms.push('Instagram');
-        if (/tiktok/i.test(userMessage)) platforms.push('TikTok');
-        if (/youtube/i.test(userMessage)) platforms.push('YouTube');
-        if (/facebook/i.test(userMessage)) platforms.push('Facebook');
-        if (/radio/i.test(userMessage)) platforms.push('Radio');
-        if (/print/i.test(userMessage)) platforms.push('Print');
-        updated.platforms = platforms.length > 0 ? platforms : ['Instagram'];
-        break;
-      case 5:
-        const contentTypes = [];
-        if (/review|unbox/i.test(userMessage)) contentTypes.push('Product Reviews');
-        if (/lifestyle|integration/i.test(userMessage)) contentTypes.push('Lifestyle Content');
-        if (/tutorial|how-?to/i.test(userMessage)) contentTypes.push('Tutorials');
-        if (/behind/i.test(userMessage)) contentTypes.push('Behind-the-Scenes');
-        if (/testimonial/i.test(userMessage)) contentTypes.push('Testimonials');
-        if (/story/i.test(userMessage)) contentTypes.push('Brand Stories');
-        updated.contentTypes = contentTypes.length > 0 ? contentTypes : ['Lifestyle Content'];
-        break;
-      case 6:
-        updated.duration = userMessage;
-        break;
-      case 7:
-        updated.messaging = userMessage;
-        break;
-    }
-
-    setCampaignData(updated);
-  };
-
-  const handleSend = async () => {
-    if (!input.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input.trim(),
-      timestamp: new Date(),
+  const handleCreate = () => {
+    const newCampaign = {
+      id: Date.now(),
+      name: data.name,
+      status: 'draft',
+      creators: 0,
+      budget: budgetNum,
+      spent: 0,
+      engagement: 0,
+      startDate: data.startDate
+        ? new Date(data.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : 'TBD',
+      endDate: data.duration,
+      platform: data.platforms.length > 1 ? 'Multi-platform' : data.platforms[0] || 'TBD',
+      niche: data.objective,
+      audience: data.audience,
+      contentTypes: data.contentTypes,
+      messaging: data.messaging,
+      tone: data.tone,
     };
 
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsTyping(true);
+    // Save to localStorage
+    const existing = JSON.parse(localStorage.getItem('user_campaigns') || '[]');
+    existing.push(newCampaign);
+    localStorage.setItem('user_campaigns', JSON.stringify(existing));
 
-    // Extract data from user message
-    extractCampaignData(input.trim(), step);
-
-    // Generate AI response
-    const aiResponse = await generateAIResponse(input.trim(), step);
-
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: aiResponse,
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, assistantMessage]);
-    setIsTyping(false);
-    setStep(prev => prev + 1);
-  };
-
-  const handleCreateCampaign = () => {
-    // In real implementation, this would save to backend
-    alert('Campaign created successfully! Redirecting to campaign details...');
     router.push('/dashboard/brand/campaigns');
   };
 
+  const budgetNum = parseInt(data.budget) || 0;
+  const suggestedCreators = Math.max(1, Math.ceil(budgetNum / 5000));
+  const suggestedContent = Math.max(1, Math.ceil(budgetNum / 3500));
+
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="border-b border-border bg-white px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => router.back()}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                <Sparkles className="h-6 w-6 text-purple-600" />
-                AI Campaign Builder
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Step {Math.min(step, 7)} of 7 • Powered by conversational AI
-              </p>
-            </div>
-          </div>
-          {step > 7 && (
-            <Button onClick={handleCreateCampaign} className="bg-purple-600 hover:bg-purple-700">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Create Campaign
-            </Button>
-          )}
+      <div className="flex items-center gap-4">
+        <Button variant="outline" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">New Campaign</h1>
+          <p className="text-sm text-muted-foreground">Create a new content campaign in a few steps</p>
         </div>
       </div>
 
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-purple-50/30 to-white p-6">
-        <div className="max-w-3xl mx-auto space-y-4">
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  message.role === 'user'
-                    ? 'bg-brand-blue text-white'
-                    : 'bg-white border border-border shadow-sm'
-                }`}
-              >
-                {message.role === 'assistant' && (
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-4 w-4 text-purple-600" />
-                    <span className="text-xs font-semibold text-purple-600">AI Assistant</span>
-                  </div>
+      {/* Step Indicator */}
+      <div className="flex items-center justify-between">
+        {STEPS.map((s, i) => {
+          const Icon = s.icon;
+          const isActive = step === s.id;
+          const isDone = step > s.id;
+          return (
+            <div key={s.id} className="flex items-center flex-1">
+              <button
+                onClick={() => isDone && setStep(s.id)}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                  isActive && 'bg-brand-blue text-white',
+                  isDone && 'bg-green-100 text-green-700 cursor-pointer',
+                  !isActive && !isDone && 'text-muted-foreground'
                 )}
-                <p className="text-sm whitespace-pre-line">{message.content}</p>
-                <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-white/70' : 'text-muted-foreground'}`}>
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
+              >
+                {isDone ? <CheckCircle className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                <span className="hidden md:inline">{s.label}</span>
+              </button>
+              {i < STEPS.length - 1 && (
+                <div className={cn('flex-1 h-px mx-2', isDone ? 'bg-green-400' : 'bg-border')} />
+              )}
             </div>
-          ))}
+          );
+        })}
+      </div>
 
-          {isTyping && (
-            <div className="flex justify-start">
-              <div className="bg-white border border-border shadow-sm rounded-2xl px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 text-purple-600 animate-spin" />
-                  <span className="text-sm text-muted-foreground">AI is thinking...</span>
+      {/* Step Content */}
+      <div className="max-w-3xl">
+        {/* Step 1: Objective */}
+        {step === 1 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Campaign Objective</CardTitle>
+              <CardDescription>What do you want to achieve with this campaign?</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input
+                label="Campaign Name"
+                placeholder="e.g., Summer Product Launch 2026"
+                value={data.name}
+                onChange={(e) => updateField('name', e.target.value)}
+              />
+              <div>
+                <label className="text-sm font-medium mb-2 block">Objective</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {OBJECTIVES.map((obj) => (
+                    <button
+                      key={obj}
+                      type="button"
+                      onClick={() => updateField('objective', obj)}
+                      className={cn(
+                        'p-3 rounded-lg border text-sm font-medium text-left transition-colors',
+                        data.objective === obj
+                          ? 'border-brand-blue bg-blue-50 text-brand-blue'
+                          : 'border-border hover:border-brand-blue/50'
+                      )}
+                    >
+                      {obj}
+                    </button>
+                  ))}
                 </div>
               </div>
-            </div>
-          )}
+            </CardContent>
+          </Card>
+        )}
 
-          <div ref={messagesEndRef} />
-        </div>
+        {/* Step 2: Audience & Budget */}
+        {step === 2 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Audience & Budget</CardTitle>
+              <CardDescription>Define who you want to reach and your spending limit</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Target Audience</label>
+                <textarea
+                  placeholder="e.g., Young professionals in Nairobi aged 25-35 interested in fitness"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue text-sm"
+                  rows={3}
+                  value={data.audience}
+                  onChange={(e) => updateField('audience', e.target.value)}
+                />
+              </div>
+              <Input
+                label="Budget (KES)"
+                placeholder="e.g., 50000"
+                type="number"
+                value={data.budget}
+                onChange={(e) => updateField('budget', e.target.value)}
+              />
+              {budgetNum > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                  With KES {budgetNum.toLocaleString()}, we recommend engaging {suggestedCreators}-{suggestedCreators + 2} creators
+                  for {suggestedContent}-{suggestedContent + 3} pieces of content.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 3: Platforms & Content */}
+        {step === 3 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Platforms & Content Types</CardTitle>
+              <CardDescription>Choose where and what type of content you want</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Platforms (select multiple)</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {PLATFORMS.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => toggleArrayItem('platforms', p)}
+                      className={cn(
+                        'p-3 rounded-lg border text-sm font-medium transition-colors',
+                        data.platforms.includes(p)
+                          ? 'border-brand-blue bg-blue-50 text-brand-blue'
+                          : 'border-border hover:border-brand-blue/50'
+                      )}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Content Types (select multiple)</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {CONTENT_TYPES.map((ct) => (
+                    <button
+                      key={ct}
+                      type="button"
+                      onClick={() => toggleArrayItem('contentTypes', ct)}
+                      className={cn(
+                        'p-3 rounded-lg border text-sm font-medium transition-colors',
+                        data.contentTypes.includes(ct)
+                          ? 'border-brand-blue bg-blue-50 text-brand-blue'
+                          : 'border-border hover:border-brand-blue/50'
+                      )}
+                    >
+                      {ct}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 4: Duration & Messaging */}
+        {step === 4 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Duration & Messaging</CardTitle>
+              <CardDescription>Set the timeline and key message for your campaign</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Duration"
+                  placeholder="e.g., 2 weeks, 1 month"
+                  value={data.duration}
+                  onChange={(e) => updateField('duration', e.target.value)}
+                />
+                <Input
+                  label="Start Date"
+                  type="date"
+                  value={data.startDate}
+                  onChange={(e) => updateField('startDate', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Key Message</label>
+                <textarea
+                  placeholder="What's the main message you want to communicate?"
+                  className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-blue text-sm"
+                  rows={3}
+                  value={data.messaging}
+                  onChange={(e) => updateField('messaging', e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Tone & Style</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {TONES.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => updateField('tone', t)}
+                      className={cn(
+                        'p-3 rounded-lg border text-sm font-medium transition-colors',
+                        data.tone === t
+                          ? 'border-brand-blue bg-blue-50 text-brand-blue'
+                          : 'border-border hover:border-brand-blue/50'
+                      )}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 5: Review */}
+        {step === 5 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Review Campaign</CardTitle>
+              <CardDescription>Confirm your campaign details before creating</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <p className="text-xs text-muted-foreground">Campaign Name</p>
+                    <p className="font-semibold mt-0.5">{data.name}</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <p className="text-xs text-muted-foreground">Objective</p>
+                    <p className="font-semibold mt-0.5">{data.objective}</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <p className="text-xs text-muted-foreground">Budget</p>
+                    <p className="font-semibold mt-0.5">KES {budgetNum.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <p className="text-xs text-muted-foreground">Duration</p>
+                    <p className="font-semibold mt-0.5">{data.duration}{data.startDate ? ` (from ${data.startDate})` : ''}</p>
+                  </div>
+                </div>
+
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground">Target Audience</p>
+                  <p className="font-semibold mt-0.5">{data.audience}</p>
+                </div>
+
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground">Platforms</p>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {data.platforms.map(p => (
+                      <span key={p} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium">{p}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-xs text-muted-foreground">Content Types</p>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {data.contentTypes.map(ct => (
+                      <span key={ct} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">{ct}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <p className="text-xs text-muted-foreground">Key Message</p>
+                    <p className="font-semibold mt-0.5">{data.messaging}</p>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-4">
+                    <p className="text-xs text-muted-foreground">Tone</p>
+                    <p className="font-semibold mt-0.5">{data.tone || 'Not specified'}</p>
+                  </div>
+                </div>
+
+                {budgetNum > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                    <p className="font-semibold mb-1">Recommendation</p>
+                    <p>Engage {suggestedCreators}-{suggestedCreators + 2} creators for {suggestedContent}-{suggestedContent + 3} pieces of content. Estimated reach: {(suggestedCreators * 50000).toLocaleString()}+ people.</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {/* Input Area */}
-      <div className="border-t border-border bg-white p-4">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Type your response..."
-              className="flex-1 px-4 py-3 border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
-              disabled={isTyping}
-            />
-            <Button
-              onClick={handleSend}
-              disabled={!input.trim() || isTyping}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2 text-center">
-            💡 Tip: Be specific about your goals, audience, and budget for better recommendations
-          </p>
-        </div>
+      {/* Navigation Buttons */}
+      <div className="max-w-3xl flex items-center justify-between">
+        <Button
+          variant="outline"
+          onClick={() => setStep(s => Math.max(1, s - 1))}
+          disabled={step === 1}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Previous
+        </Button>
+
+        {step < 5 ? (
+          <Button
+            onClick={() => setStep(s => s + 1)}
+            disabled={!canNext()}
+          >
+            Next
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        ) : (
+          <Button onClick={handleCreate} className="bg-green-600 hover:bg-green-700">
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Create Campaign
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Badge } from '@/components/ui';
 import { formatNumber, formatCurrency } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 const demoPosts = [
   {
@@ -100,6 +101,7 @@ const statusColor: Record<string, string> = {
 };
 
 export default function MyPostsPage() {
+  const router = useRouter();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'pending'>('all');
 
   const filtered = filter === 'all' ? demoPosts : demoPosts.filter(p => p.status === filter);
@@ -112,7 +114,7 @@ export default function MyPostsPage() {
           <h1 className="text-2xl font-bold text-foreground">My Posts</h1>
           <p className="text-muted-foreground mt-1">Manage and track your content across all platforms</p>
         </div>
-        <Button variant="brand">
+        <Button variant="brand" onClick={() => router.push('/dashboard/creative/content/new')}>
           <Plus className="h-4 w-4 mr-2" />
           Create New Post
         </Button>

@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { cn } from '../../lib/utils';
 import { 
   Home, 
-  User, 
   Wallet, 
   FileText, 
   TrendingUp,
@@ -13,14 +12,12 @@ import {
   ShoppingBag,
   BarChart3,
   Shield,
-  LogOut,
   MessageSquare,
-  Settings,
   Globe,
-  Folder
+  Award,
+  Star,
 } from 'lucide-react';
-import { useUserRole, useUser, useAuth } from '../../contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useUserRole, useUser, useCreatorProfile } from '../../contexts/AuthContext';
 import { Avatar, Badge } from '../ui';
 
 interface SidebarItem {
@@ -37,12 +34,6 @@ const sidebarItems: SidebarItem[] = [
     href: '/dashboard',
     icon: <Home className="h-4 w-4" />,
   },
-  {
-    name: 'Profile',
-    href: '/dashboard/profile',
-    icon: <User className="h-4 w-4" />,
-    roles: ['CREATOR', 'BRAND'],
-  },
   // Creator
   {
     name: 'My Content',
@@ -51,26 +42,8 @@ const sidebarItems: SidebarItem[] = [
     roles: ['CREATOR'],
   },
   {
-    name: 'My Posts',
-    href: '/dashboard/creative/posts',
-    icon: <FileText className="h-4 w-4" />,
-    roles: ['CREATOR'],
-  },
-  {
-    name: 'Wallet',
-    href: '/dashboard/creative/wallet',
-    icon: <Wallet className="h-4 w-4" />,
-    roles: ['CREATOR'],
-  },
-  {
-    name: 'Earnings',
-    href: '/dashboard/creative/earnings',
-    icon: <TrendingUp className="h-4 w-4" />,
-    roles: ['CREATOR'],
-  },
-  {
-    name: 'Withdrawals',
-    href: '/dashboard/creative/withdrawals',
+    name: 'Earnings & Wallet',
+    href: '/dashboard/creative/earnings-wallet',
     icon: <Wallet className="h-4 w-4" />,
     roles: ['CREATOR'],
   },
@@ -94,7 +67,7 @@ const sidebarItems: SidebarItem[] = [
     roles: ['BRAND'],
   },
   {
-    name: 'Wallet',
+    name: 'Transactions',
     href: '/dashboard/brand/wallet',
     icon: <Wallet className="h-4 w-4" />,
     roles: ['BRAND'],
@@ -103,12 +76,6 @@ const sidebarItems: SidebarItem[] = [
     name: 'Purchases',
     href: '/dashboard/brand/purchases',
     icon: <ShoppingBag className="h-4 w-4" />,
-    roles: ['BRAND'],
-  },
-  {
-    name: 'Social Media',
-    href: '/dashboard/brand/social',
-    icon: <Users className="h-4 w-4" />,
     roles: ['BRAND'],
   },
   {
@@ -173,25 +140,41 @@ const sidebarItems: SidebarItem[] = [
     icon: <MessageSquare className="h-4 w-4" />,
     roles: ['SUPPORT_AGENT', 'ADMIN'],
   },
-  // Settings (all users)
-  {
-    name: 'Settings',
-    href: '/dashboard/settings/security',
-    icon: <Settings className="h-4 w-4" />,
-  },
 ];
+
+type BadgeTier = 'BRONZE' | 'SILVER' | 'GOLD';
+
+const BADGE_COLORS: Record<BadgeTier, { bg: string; text: string; border: string }> = {
+  BRONZE: { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300' },
+  SILVER: { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-400' },
+  GOLD: { bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-500' },
+};
+
+function getBadgeTier(isVerified: boolean, points: number): BadgeTier {
+  if (isVerified && points >= 500) return 'GOLD';
+  if (isVerified) return 'SILVER';
+  return 'BRONZE';
+}
+
+function SidebarBadge({ tier }: { tier: BadgeTier }) {
+  const colors = BADGE_COLORS[tier];
+  const Icon = tier === 'GOLD' ? Star : tier === 'SILVER' ? Shield : Award;
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border text-[10px] font-semibold ${colors.bg} ${colors.border} ${colors.text}`}>
+      <Icon className="h-3 w-3" />
+      {tier === 'BRONZE' ? 'B' : tier === 'SILVER' ? 'S' : 'G'}
+    </span>
+  );
+}
 
 export function DashboardSidebar() {
   const pathname = usePathname();
   const userRole = useUserRole();
   const user = useUser();
-  const { logout } = useAuth();
-  const router = useRouter();
+  const creatorProfile = useCreatorProfile();
 
-  const handleLogout = async () => {
-    await logout();
-    router.push('/');
-  };
+  const isVerified = creatorProfile?.isVerified || false;
+  const badgeTier = getBadgeTier(isVerified, 120);
 
   const filteredItems = sidebarItems.filter(item => 
     !item.roles || item.roles.includes(userRole as any)
@@ -209,9 +192,12 @@ export function DashboardSidebar() {
             fallback={user?.name || 'User'}
           />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">
-              {user?.name}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-medium text-foreground truncate">
+                {user?.name}
+              </p>
+              {userRole === 'CREATOR' && <SidebarBadge tier={badgeTier} />}
+            </div>
             <p className="text-xs text-muted-foreground capitalize">
               {userRole?.toLowerCase()}
             </p>
@@ -248,34 +234,6 @@ export function DashboardSidebar() {
         })}
       </nav>
 
-      {/* Quick Actions */}
-      <div className="mt-8 pt-8 border-t border-border">
-        <div className="space-y-2">
-          <Link
-            href="/marketplace"
-            className="block px-3 py-2 text-sm text-brand-blue hover:text-brand-blue-dark font-medium"
-          >
-            Browse Marketplace
-          </Link>
-          <Link
-            href="/help"
-            className="block px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
-          >
-            Help & Support
-          </Link>
-        </div>
-      </div>
-
-      {/* Logout */}
-      <div className="mt-4 pt-4 border-t border-border">
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors"
-        >
-          <LogOut className="h-4 w-4" />
-          <span>Log Out</span>
-        </button>
-      </div>
     </div>
   );
 }

@@ -30,7 +30,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [role, setRole] = useState<'CREATOR' | 'BRAND'>('CREATOR');
   const router = useRouter();
   const { login } = useAuth();
 
@@ -46,7 +45,7 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
     try {
-      await login(data.email, data.password, role);
+      await login(data.email, data.password);
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to login. Please try again.');
@@ -177,35 +176,6 @@ export default function LoginPage() {
               >
                 Forgot password?
               </Link>
-            </div>
-
-            {/* Role selector */}
-            <div>
-              <p className="text-sm font-medium text-foreground mb-2">I am a</p>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole('BRAND')}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border-2 text-sm font-semibold transition-colors ${
-                    role === 'BRAND'
-                      ? 'border-brand-blue bg-brand-blue/10 text-brand-blue'
-                      : 'border-border text-muted-foreground hover:border-brand-blue/40'
-                  }`}
-                >
-                  Brand
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('CREATOR')}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border-2 text-sm font-semibold transition-colors ${
-                    role === 'CREATOR'
-                      ? 'border-orange-500 bg-orange-50 text-orange-600'
-                      : 'border-border text-muted-foreground hover:border-orange-400/40'
-                  }`}
-                >
-                  Creator
-                </button>
-              </div>
             </div>
 
             <Button type="submit" className="w-full" loading={isLoading} variant="brand" size="lg">

@@ -13,3 +13,4 @@ export { StatusBadge, getStatusVariant } from './status-badge';
 export { EmptyState } from './empty-state';
 export { ConfirmDialog } from './confirm-dialog';
 export { MultiStepWizard } from './multi-step-wizard';
+export { ComingSoon } from './ComingSoon';

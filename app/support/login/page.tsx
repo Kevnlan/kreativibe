@@ -22,7 +22,7 @@ export default function SupportLoginPage() {
     setIsLoading(true);
 
     try {
-      await login(email, password, 'SUPPORT_AGENT');
+      await login(email, password);
       router.push('/dashboard/support-agent');
     } catch (err: any) {
       setError(err.message || 'Invalid credentials. Please try again.');

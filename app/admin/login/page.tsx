@@ -22,7 +22,7 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      await login(email, password, 'ADMIN');
+      await login(email, password);
       router.push('/dashboard/admin');
     } catch (err: any) {
       setError(err.message || 'Invalid credentials. Please try again.');

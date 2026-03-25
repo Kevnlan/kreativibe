@@ -53,7 +53,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     updatedAt: new Date().toISOString(),
   });
 
-  const login = async (email: string, password: string, role: 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT' = 'BRAND'): Promise<void> => {
+  const inferRoleFromEmail = (email: string): 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT' => {
+    const lower = email.toLowerCase();
+    if (lower.includes('creator')) return 'CREATOR';
+    if (lower.includes('brand')) return 'BRAND';
+    if (lower.includes('admin')) return 'ADMIN';
+    if (lower.includes('support')) return 'SUPPORT_AGENT';
+    return 'CREATOR';
+  };
+
+  const login = async (email: string, password: string): Promise<void> => {
     setLoading(true);
     try {
       const response = await apiClient.login(email, password);
@@ -61,7 +70,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setCreatorProfile(response.creatorProfile || null);
       setBrandProfile(response.brandProfile || null);
     } catch (error) {
-      // API unavailable — fall back to mock login
+      // API unavailable — fall back to mock login, infer role from email
+      const role = inferRoleFromEmail(email);
       const mockUser = buildMockUser(email, role);
       if (typeof window !== 'undefined') {
         localStorage.setItem('mock_user', JSON.stringify(mockUser));

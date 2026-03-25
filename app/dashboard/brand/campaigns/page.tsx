@@ -1,12 +1,27 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Search, Users, DollarSign, Calendar, TrendingUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Plus, Search, Users, DollarSign, Calendar, TrendingUp, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { formatCurrency } from '@/lib/utils';
 
-const demoCampaigns = [
+interface Campaign {
+  id: number;
+  name: string;
+  status: string;
+  creators: number;
+  budget: number;
+  spent: number;
+  engagement: number;
+  startDate: string;
+  endDate: string;
+  platform: string;
+  niche: string;
+}
+
+const demoCampaigns: Campaign[] = [
   {
     id: 1,
     name: 'Summer Collection Launch',
@@ -94,19 +109,40 @@ const statusStyles: Record<string, string> = {
 };
 
 export default function CampaignsPage() {
+  const router = useRouter();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'draft'>('all');
   const [search, setSearch] = useState('');
+  const [campaigns, setCampaigns] = useState<Campaign[]>(demoCampaigns);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const filtered = demoCampaigns.filter(c => {
+  useEffect(() => {
+    // Load user-created campaigns from localStorage
+    try {
+      const stored = JSON.parse(localStorage.getItem('user_campaigns') || '[]') as Campaign[];
+      if (stored.length > 0) {
+        setCampaigns([...stored.reverse(), ...demoCampaigns]);
+        // Show success banner if a campaign was just created (within last 5 seconds)
+        const latest = stored[0];
+        if (latest && Date.now() - latest.id < 5000) {
+          setShowSuccess(true);
+          setTimeout(() => setShowSuccess(false), 4000);
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }, []);
+
+  const filtered = campaigns.filter(c => {
     const matchesFilter = filter === 'all' || c.status === filter;
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.niche.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
-  const totalBudget = demoCampaigns.reduce((s, c) => s + c.budget, 0);
-  const totalSpent = demoCampaigns.reduce((s, c) => s + c.spent, 0);
-  const activeCampaigns = demoCampaigns.filter(c => c.status === 'active').length;
+  const totalBudget = campaigns.reduce((s, c) => s + c.budget, 0);
+  const totalSpent = campaigns.reduce((s, c) => s + c.spent, 0);
+  const activeCampaigns = campaigns.filter(c => c.status === 'active').length;
 
   return (
     <div className="space-y-6">
@@ -116,16 +152,23 @@ export default function CampaignsPage() {
           <h1 className="text-2xl font-bold text-foreground">Campaigns</h1>
           <p className="text-muted-foreground mt-1">Manage all your influencer marketing campaigns</p>
         </div>
-        <Button variant="brand" onClick={() => window.location.href = '/dashboard/brand/campaigns/new'}>
+        <Button variant="brand" onClick={() => router.push('/dashboard/brand/campaigns/new')}>
           <Plus className="h-4 w-4 mr-2" />
           New Campaign
         </Button>
       </div>
 
+      {showSuccess && (
+        <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg text-sm flex items-center gap-2 animate-in fade-in">
+          <CheckCircle className="h-4 w-4 flex-shrink-0" />
+          Campaign created successfully! It&apos;s now visible as a draft in your campaigns list.
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Campaigns', value: demoCampaigns.length, icon: <TrendingUp className="h-4 w-4" />, color: 'text-blue-600' },
+          { label: 'Total Campaigns', value: campaigns.length, icon: <TrendingUp className="h-4 w-4" />, color: 'text-blue-600' },
           { label: 'Active Now', value: activeCampaigns, icon: <Calendar className="h-4 w-4" />, color: 'text-green-600' },
           { label: 'Total Budget', value: formatCurrency(totalBudget), icon: <DollarSign className="h-4 w-4" />, color: 'text-purple-600' },
           { label: 'Total Spent', value: formatCurrency(totalSpent), icon: <Users className="h-4 w-4" />, color: 'text-orange-600' },

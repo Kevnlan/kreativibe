@@ -17,10 +17,12 @@ import { Button } from '@/components/ui';
 import { useCreatorProfile, useUser } from '@/contexts/AuthContext';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { KYCBanner } from '@/components/dashboard/KYCBanner';
+import { useRouter } from 'next/navigation';
 
 export default function CreatorDashboard() {
   const creatorProfile = useCreatorProfile();
   const user = useUser();
+  const router = useRouter();
   const [stats, setStats] = useState({
     totalViews: 0,
     totalLikes: 0,
@@ -98,7 +100,7 @@ export default function CreatorDashboard() {
             Here's what's happening with your creator profile today.
           </p>
         </div>
-        <Button className="mt-4 sm:mt-0">
+        <Button className="mt-4 sm:mt-0" onClick={() => router.push('/dashboard/creative/content/new')}>
           <Plus className="h-4 w-4 mr-2" />
           Create New Post
         </Button>
@@ -135,15 +137,15 @@ export default function CreatorDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full justify-start">
+            <Button variant="outline" className="w-full justify-start" onClick={() => router.push('/dashboard/creative/content/new')}>
               <FileText className="h-4 w-4 mr-2" />
               Create New Post
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button variant="outline" className="w-full justify-start" onClick={() => router.push('/dashboard/creative/posts')}>
               <Users className="h-4 w-4 mr-2" />
               View Analytics
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button variant="outline" className="w-full justify-start" onClick={() => router.push('/dashboard/creative/withdrawals')}>
               <DollarSign className="h-4 w-4 mr-2" />
               Withdraw Earnings
             </Button>
