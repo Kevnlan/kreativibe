@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '../../lib/utils';
-import { 
-  Home, 
-  Wallet, 
-  FileText, 
+import {
+  Home,
+  Wallet,
+  FileText,
   TrendingUp,
   Users,
   ShoppingBag,
@@ -16,6 +16,9 @@ import {
   Globe,
   Award,
   Star,
+  BookOpen,
+  Trophy,
+  CheckSquare,
 } from 'lucide-react';
 import { useUserRole, useUser, useCreatorProfile } from '../../contexts/AuthContext';
 import { Avatar, Badge } from '../ui';
@@ -59,6 +62,24 @@ const sidebarItems: SidebarItem[] = [
     icon: <BarChart3 className="h-4 w-4" />,
     roles: ['CREATOR'],
   },
+  {
+    name: 'Reputation',
+    href: '/dashboard/creative/reputation',
+    icon: <Trophy className="h-4 w-4" />,
+    roles: ['CREATOR'],
+  },
+  {
+    name: 'Learning Center',
+    href: '/dashboard/creative/education',
+    icon: <BookOpen className="h-4 w-4" />,
+    roles: ['CREATOR'],
+  },
+  {
+    name: 'KYC Verification',
+    href: '/onboarding/creator',
+    icon: <CheckSquare className="h-4 w-4" />,
+    roles: ['CREATOR'],
+  },
   // Brand
   {
     name: 'Marketplace',
@@ -98,6 +119,12 @@ const sidebarItems: SidebarItem[] = [
     roles: ['ADMIN'],
   },
   {
+    name: 'KYC Verification',
+    href: '/dashboard/admin/verification',
+    icon: <CheckSquare className="h-4 w-4" />,
+    roles: ['ADMIN'],
+  },
+  {
     name: 'Brands',
     href: '/dashboard/admin/brands',
     icon: <ShoppingBag className="h-4 w-4" />,
@@ -132,6 +159,13 @@ const sidebarItems: SidebarItem[] = [
     href: '/dashboard/admin/settings',
     icon: <Shield className="h-4 w-4" />,
     roles: ['ADMIN'],
+  },
+  // Community (visible to creators and brands)
+  {
+    name: 'Community',
+    href: '/community',
+    icon: <MessageSquare className="h-4 w-4" />,
+    roles: ['CREATOR', 'BRAND'],
   },
   // Support Agent
   {

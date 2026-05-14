@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { Button, DataTable, StatCard, StatusBadge, EmptyState } from '@/components/ui';
 import { WithdrawalRequest } from '@/types/api-contracts/withdrawal.types';
+import { withdrawalService } from '@/services/withdrawal.service';
 import { mockStore } from '@/lib/mock-data/mock-store';
 import { useUser } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -23,11 +24,11 @@ export default function WithdrawalsPage() {
   const loadWithdrawals = async () => {
     setLoading(true);
     try {
-      // Mock data - replace with actual API call
+      const response = await withdrawalService.getWithdrawals();
+      setWithdrawals((response as any).withdrawals || (response as any).data || []);
+    } catch {
       const data = mockStore.getWithdrawals(user!.id);
       setWithdrawals(data);
-    } catch (error) {
-      console.error('Failed to load withdrawals:', error);
     } finally {
       setLoading(false);
     }

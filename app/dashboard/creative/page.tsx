@@ -17,12 +17,14 @@ import { Button } from '@/components/ui';
 import { useCreatorProfile, useUser } from '@/contexts/AuthContext';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { KYCBanner } from '@/components/dashboard/KYCBanner';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function CreatorDashboard() {
   const creatorProfile = useCreatorProfile();
   const user = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [kycSubmittedMsg, setKycSubmittedMsg] = useState(false);
   const [stats, setStats] = useState({
     totalViews: 0,
     totalLikes: 0,
@@ -33,6 +35,10 @@ export default function CreatorDashboard() {
   });
 
   useEffect(() => {
+    if (searchParams.get('kyc') === 'submitted') {
+      setKycSubmittedMsg(true);
+      setTimeout(() => setKycSubmittedMsg(false), 6000);
+    }
     // Mock data - in real app, fetch from API
     setStats({
       totalViews: 125000,
@@ -42,7 +48,7 @@ export default function CreatorDashboard() {
       activePosts: 12,
       pendingOrders: 3,
     });
-  }, []);
+  }, [searchParams]);
 
   if (!user) {
     return (
@@ -85,10 +91,21 @@ export default function CreatorDashboard() {
 
   return (
     <div className="space-y-6">
+      {kycSubmittedMsg && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+            <TrendingUp className="h-4 w-4 text-green-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-green-900">KYC Submitted Successfully!</p>
+            <p className="text-sm text-green-700">Your verification is under review. We'll notify you within 24-48 hours.</p>
+          </div>
+        </div>
+      )}
       {/* KYC Completion Banner */}
-      <KYCBanner 
-        userRole="CREATOR" 
-        isKYCComplete={false} 
+      <KYCBanner
+        userRole="CREATOR"
+        isKYCComplete={creatorProfile?.isVerified === true || creatorProfile?.verificationStatus === 'VERIFIED'}
       />
       
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">

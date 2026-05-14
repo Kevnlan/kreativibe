@@ -18,10 +18,13 @@ import { Input } from '@/components/ui';
 import { useBrandProfile, useUser } from '@/contexts/AuthContext';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { KYCBanner } from '@/components/dashboard/KYCBanner';
+import { useSearchParams } from 'next/navigation';
 
 export default function BrandDashboard() {
   const brandProfile = useBrandProfile();
   const user = useUser();
+  const searchParams = useSearchParams();
+  const [verificationMsg, setVerificationMsg] = useState(false);
   const [stats, setStats] = useState({
     activeCampaigns: 5,
     totalSpent: 85000,
@@ -32,6 +35,10 @@ export default function BrandDashboard() {
   });
 
   useEffect(() => {
+    if (searchParams.get('verification') === 'submitted') {
+      setVerificationMsg(true);
+      setTimeout(() => setVerificationMsg(false), 6000);
+    }
     // Mock data - in real app, fetch from API
     setStats({
       activeCampaigns: 5,
@@ -41,7 +48,7 @@ export default function BrandDashboard() {
       pendingOrders: 2,
       completedCampaigns: 12,
     });
-  }, []);
+  }, [searchParams]);
 
   if (!user) {
     return (
@@ -111,10 +118,21 @@ export default function BrandDashboard() {
 
   return (
     <div className="space-y-6">
+      {verificationMsg && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+            <TrendingUp className="h-4 w-4 text-green-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-green-900">Verification Submitted!</p>
+            <p className="text-sm text-green-700">Our team will review your application within 24-48 hours. You'll receive an email once approved.</p>
+          </div>
+        </div>
+      )}
       {/* KYC Completion Banner */}
-      <KYCBanner 
-        userRole="BRAND" 
-        isKYCComplete={false} 
+      <KYCBanner
+        userRole="BRAND"
+        isKYCComplete={brandProfile?.isVerified === true || brandProfile?.verificationStatus === 'VERIFIED'}
       />
       
       {/* Header */}

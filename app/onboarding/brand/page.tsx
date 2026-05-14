@@ -6,6 +6,8 @@ import { ArrowLeft, ArrowRight, Upload, CheckCircle, Building2, FileText, Image 
 import { Button, Input, Card, CardContent, MultiStepWizard } from '@/components/ui';
 import type { WizardStep } from '@/components/ui/multi-step-wizard';
 import { useUser } from '@/contexts/AuthContext';
+import { uploadService } from '@/services/upload.service';
+import { brandService } from '@/services/brand.service';
 
 interface BrandKYCData {
   // Step 1: Business Details
@@ -88,14 +90,55 @@ export default function BrandOnboardingPage() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Mock API call - in real implementation, this would upload files and save data
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      alert('Brand verification submitted! Our team will review your application within 24-48 hours. You will receive an email notification once approved.');
-      router.push('/dashboard/brand');
-    } catch (error) {
+      let logoUrl = '';
+      let coverImageUrl = '';
+      let registrationCertUrl = '';
+      let taxComplianceUrl = '';
+
+      if (kycData.logoFile) {
+        const r = await uploadService.uploadFile(kycData.logoFile);
+        logoUrl = r.url;
+      }
+      if (kycData.coverImageFile) {
+        const r = await uploadService.uploadFile(kycData.coverImageFile);
+        coverImageUrl = r.url;
+      }
+      if (kycData.registrationCertFile) {
+        const r = await uploadService.uploadFile(kycData.registrationCertFile);
+        registrationCertUrl = r.url;
+      }
+      if (kycData.taxComplianceFile) {
+        const r = await uploadService.uploadFile(kycData.taxComplianceFile);
+        taxComplianceUrl = r.url;
+      }
+
+      await brandService.submitBrandProfile({
+        companyName: kycData.companyName!,
+        industry: kycData.industry!,
+        description: kycData.description!,
+        address: kycData.address!,
+        city: kycData.city!,
+        phone: kycData.phone!,
+        contactEmail: kycData.contactEmail!,
+        registrationNumber: kycData.registrationNumber,
+        contactPersonName: kycData.contactPersonName!,
+        contactPersonId: kycData.contactPersonId!,
+        contactPersonRole: kycData.contactPersonRole!,
+        logoUrl,
+        coverImageUrl,
+        website: kycData.website,
+        instagram: kycData.instagram,
+        facebook: kycData.facebook,
+        twitter: kycData.twitter,
+        linkedin: kycData.linkedin,
+        registrationCertUrl,
+        taxComplianceUrl,
+      });
+
+      router.push('/dashboard/brand?verification=submitted');
+    } catch (error: any) {
       console.error('Brand KYC submission failed:', error);
-      alert('Submission failed. Please try again.');
+      alert(error?.message || 'Submission failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

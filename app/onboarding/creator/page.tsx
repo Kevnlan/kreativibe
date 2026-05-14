@@ -6,6 +6,8 @@ import { ArrowLeft, ArrowRight, Upload, CheckCircle, Shield, User, Link as LinkI
 import { Button, Input, Card, CardContent, MultiStepWizard } from '@/components/ui';
 import type { WizardStep } from '@/components/ui/multi-step-wizard';
 import { useUser } from '@/contexts/AuthContext';
+import { uploadService } from '@/services/upload.service';
+import { kycService } from '@/services/kyc.service';
 
 interface KYCData {
   // Step 1: KYC Documents
@@ -84,14 +86,54 @@ export default function CreatorOnboardingPage() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Mock API call - in real implementation, this would upload files and save data
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      alert('KYC submission successful! Your profile is under review. You will be notified once verified.');
-      router.push('/dashboard/creative');
-    } catch (error) {
+      let idFrontUrl = '';
+      let idBackUrl = '';
+      let kraCertUrl = '';
+      const portfolioUrls: string[] = [];
+
+      if (kycData.idFrontFile) {
+        const r = await uploadService.uploadFile(kycData.idFrontFile);
+        idFrontUrl = r.url;
+      }
+      if (kycData.idBackFile) {
+        const r = await uploadService.uploadFile(kycData.idBackFile);
+        idBackUrl = r.url;
+      }
+      if (kycData.kraCertFile) {
+        const r = await uploadService.uploadFile(kycData.kraCertFile);
+        kraCertUrl = r.url;
+      }
+      for (const file of kycData.portfolioSamples || []) {
+        const r = await uploadService.uploadFile(file);
+        portfolioUrls.push(r.url);
+      }
+
+      await kycService.submitKyc({
+        nationalId: kycData.nationalId!,
+        kraPin: kycData.kraPin!,
+        phone: kycData.phone!,
+        city: kycData.city!,
+        dateOfBirth: kycData.dateOfBirth!,
+        idFrontUrl,
+        idBackUrl,
+        kraCertUrl,
+        bio: kycData.bio!,
+        categories: kycData.categories!,
+        portfolioUrls,
+        instagram: kycData.instagram,
+        instagramFollowers: kycData.instagramFollowers,
+        tiktok: kycData.tiktok,
+        tiktokFollowers: kycData.tiktokFollowers,
+        youtube: kycData.youtube,
+        youtubeFollowers: kycData.youtubeFollowers,
+        facebook: kycData.facebook,
+        twitter: kycData.twitter,
+      });
+
+      router.push('/dashboard/creative?kyc=submitted');
+    } catch (error: any) {
       console.error('KYC submission failed:', error);
-      alert('Submission failed. Please try again.');
+      alert(error?.message || 'Submission failed. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

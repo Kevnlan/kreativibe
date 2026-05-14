@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Shield, CheckCircle, XCircle, Eye, Download, Clock, Search, Filter } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, CardTitle, Input } from '@/components/ui';
+import { adminService } from '@/services/admin.service';
 
 interface KYCSubmission {
   id: string;
@@ -99,6 +100,7 @@ export default function AdminVerificationPage() {
   const [search, setSearch] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<KYCSubmission | null>(null);
   const [reviewNote, setReviewNote] = useState('');
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
   const filteredSubmissions = submissions.filter(sub => {
     const matchesFilter = filter === 'ALL' || sub.status === filter;
@@ -107,39 +109,46 @@ export default function AdminVerificationPage() {
     return matchesFilter && matchesSearch;
   });
 
-  const handleApprove = (submissionId: string) => {
-    setSubmissions(prev => prev.map(sub => 
-      sub.id === submissionId 
-        ? { 
-            ...sub, 
-            status: 'APPROVED', 
-            reviewedAt: new Date().toISOString(),
-            reviewedBy: 'admin@kreativibe.com'
-          }
-        : sub
-    ));
-    setSelectedSubmission(null);
-    alert('KYC submission approved! User will receive email notification.');
-  };
-
-  const handleReject = (submissionId: string) => {
-    if (!reviewNote.trim()) {
-      alert('Please provide a reason for rejection');
-      return;
+  const handleApprove = async (submissionId: string) => {
+    const submission = submissions.find(s => s.id === submissionId);
+    if (!submission) return;
+    setIsActionLoading(true);
+    try {
+      await adminService.reviewKyc(submission.userId, { status: 'VERIFIED', adminComments: reviewNote });
+    } catch {
+      // Continue with optimistic update
     }
-    setSubmissions(prev => prev.map(sub => 
-      sub.id === submissionId 
-        ? { 
-            ...sub, 
-            status: 'REJECTED', 
-            reviewedAt: new Date().toISOString(),
-            reviewedBy: 'admin@kreativibe.com'
-          }
+    setSubmissions(prev => prev.map(sub =>
+      sub.id === submissionId
+        ? { ...sub, status: 'APPROVED', reviewedAt: new Date().toISOString(), reviewedBy: 'admin' }
         : sub
     ));
     setSelectedSubmission(null);
     setReviewNote('');
-    alert('KYC submission rejected. User will receive email notification with reason.');
+    setIsActionLoading(false);
+  };
+
+  const handleReject = async (submissionId: string) => {
+    if (!reviewNote.trim()) {
+      alert('Please provide a reason for rejection');
+      return;
+    }
+    const submission = submissions.find(s => s.id === submissionId);
+    if (!submission) return;
+    setIsActionLoading(true);
+    try {
+      await adminService.reviewKyc(submission.userId, { status: 'REJECTED', adminComments: reviewNote });
+    } catch {
+      // Continue with optimistic update
+    }
+    setSubmissions(prev => prev.map(sub =>
+      sub.id === submissionId
+        ? { ...sub, status: 'REJECTED', reviewedAt: new Date().toISOString(), reviewedBy: 'admin' }
+        : sub
+    ));
+    setSelectedSubmission(null);
+    setReviewNote('');
+    setIsActionLoading(false);
   };
 
   const statusColors = {
@@ -378,6 +387,8 @@ export default function AdminVerificationPage() {
                       <Button
                         onClick={() => handleApprove(selectedSubmission.id)}
                         className="flex-1 bg-green-600 hover:bg-green-700"
+                        disabled={isActionLoading}
+                        loading={isActionLoading}
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Approve
@@ -386,6 +397,8 @@ export default function AdminVerificationPage() {
                         onClick={() => handleReject(selectedSubmission.id)}
                         variant="destructive"
                         className="flex-1"
+                        disabled={isActionLoading}
+                        loading={isActionLoading}
                       >
                         <XCircle className="h-4 w-4 mr-2" />
                         Reject

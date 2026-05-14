@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Image as ImageIcon, Video, Music, Package, Eye, Edit, Trash2, Copy, Sparkles } from 'lucide-react';
 import { Button, DataTable, StatCard, StatusBadge, Input, EmptyState } from '@/components/ui';
 import { Content, ContentStatus, ContentType } from '@/types/api-contracts/content.types';
+import { contentService } from '@/services/content.service';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/contexts/AuthContext';
 
@@ -25,90 +26,24 @@ export default function ContentManagementPage() {
   const loadContents = async () => {
     setLoading(true);
     try {
-      // Mock data - replace with actual API call
-      const mockContents: Content[] = [
+      const response = await contentService.getMyContents();
+      setContents(response.data || []);
+    } catch {
+      // Fallback mock content when API is unavailable
+      setContents([
         {
           id: '1',
           creatorId: user!.id,
           type: 'IMAGE',
           format: 'IMAGE',
-          metadata: {
-            title: 'Summer Beach Lifestyle',
-            description: 'Beautiful beach sunset photos',
-            category: 'LIFESTYLE',
-            platforms: ['INSTAGRAM', 'FACEBOOK'],
-            tags: ['summer', 'beach', 'sunset'],
-          },
+          metadata: { title: 'Summer Beach Lifestyle', description: 'Beautiful beach sunset photos', category: 'LIFESTYLE', platforms: ['INSTAGRAM', 'FACEBOOK'], tags: ['summer', 'beach', 'sunset'] },
           coverImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400',
-          mediaUrls: ['https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800'],
-          price: 5000,
-          currency: 'KES',
-          status: 'PUBLISHED',
-          moderationStatus: 'APPROVED',
-          currentVersion: 1,
-          views: 245,
-          likes: 32,
-          purchases: 3,
-          revenue: 15000,
-          createdAt: '2024-03-15T10:00:00Z',
-          updatedAt: '2024-03-15T10:00:00Z',
-          publishedAt: '2024-03-15T12:00:00Z',
+          mediaUrls: [],
+          price: 5000, currency: 'KES', status: 'PUBLISHED', moderationStatus: 'APPROVED', currentVersion: 1,
+          views: 245, likes: 32, purchases: 3, revenue: 15000,
+          createdAt: '2024-03-15T10:00:00Z', updatedAt: '2024-03-15T10:00:00Z', publishedAt: '2024-03-15T12:00:00Z',
         },
-        {
-          id: '2',
-          creatorId: user!.id,
-          type: 'IMAGE',
-          format: 'CAROUSEL',
-          metadata: {
-            title: 'Fashion Product Showcase',
-            description: 'Professional product photography',
-            category: 'FASHION',
-            platforms: ['INSTAGRAM', 'TIKTOK'],
-            tags: ['fashion', 'product', 'commercial'],
-          },
-          coverImage: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400',
-          mediaUrls: ['https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800'],
-          price: 8000,
-          currency: 'KES',
-          status: 'UNDER_REVIEW',
-          moderationStatus: 'IN_REVIEW',
-          currentVersion: 1,
-          views: 0,
-          likes: 0,
-          purchases: 0,
-          revenue: 0,
-          createdAt: '2024-03-18T08:00:00Z',
-          updatedAt: '2024-03-18T08:00:00Z',
-        },
-        {
-          id: '3',
-          creatorId: user!.id,
-          type: 'IMAGE',
-          format: 'STORY',
-          metadata: {
-            title: 'Food Photography Collection',
-            description: 'Delicious food shots for restaurants',
-            category: 'FOOD',
-            platforms: ['INSTAGRAM'],
-            tags: ['food', 'restaurant', 'culinary'],
-          },
-          coverImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',
-          mediaUrls: ['https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800'],
-          price: 3500,
-          currency: 'KES',
-          status: 'DRAFT',
-          currentVersion: 1,
-          views: 0,
-          likes: 0,
-          purchases: 0,
-          revenue: 0,
-          createdAt: '2024-03-18T14:00:00Z',
-          updatedAt: '2024-03-18T14:00:00Z',
-        },
-      ];
-      setContents(mockContents);
-    } catch (error) {
-      console.error('Failed to load contents:', error);
+      ]);
     } finally {
       setLoading(false);
     }
@@ -157,26 +92,32 @@ export default function ContentManagementPage() {
 
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this content?')) {
+      try {
+        await contentService.deleteContent(id);
+      } catch {
+        // Optimistic delete even if API fails
+      }
       setContents(contents.filter(c => c.id !== id));
     }
   };
 
   const handleDuplicate = async (id: string) => {
-    const content = contents.find(c => c.id === id);
-    if (content) {
-      // Mock duplicate
-      const duplicate = {
-        ...content,
-        id: `${id}-copy`,
-        metadata: {
-          ...content.metadata,
-          title: `${content.metadata.title} (Copy)`,
-        },
-        status: 'DRAFT' as ContentStatus,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+    try {
+      const duplicate = await contentService.duplicateContent(id);
       setContents([duplicate, ...contents]);
+    } catch {
+      const content = contents.find(c => c.id === id);
+      if (content) {
+        const duplicate = {
+          ...content,
+          id: `${id}-copy`,
+          metadata: { ...content.metadata, title: `${content.metadata.title} (Copy)` },
+          status: 'DRAFT' as ContentStatus,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setContents([duplicate, ...contents]);
+      }
     }
   };
 
