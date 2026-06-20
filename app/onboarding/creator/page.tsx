@@ -92,19 +92,19 @@ export default function CreatorOnboardingPage() {
       const portfolioUrls: string[] = [];
 
       if (kycData.idFrontFile) {
-        const r = await uploadService.uploadFile(kycData.idFrontFile);
+        const r = await uploadService.uploadFile(kycData.idFrontFile, undefined, 'KYC_ID_FRONT');
         idFrontUrl = r.url;
       }
       if (kycData.idBackFile) {
-        const r = await uploadService.uploadFile(kycData.idBackFile);
+        const r = await uploadService.uploadFile(kycData.idBackFile, undefined, 'KYC_ID_BACK');
         idBackUrl = r.url;
       }
       if (kycData.kraCertFile) {
-        const r = await uploadService.uploadFile(kycData.kraCertFile);
+        const r = await uploadService.uploadFile(kycData.kraCertFile, undefined, 'KYC_KRA_CERT');
         kraCertUrl = r.url;
       }
       for (const file of kycData.portfolioSamples || []) {
-        const r = await uploadService.uploadFile(file);
+        const r = await uploadService.uploadFile(file, undefined, 'PORTFOLIO_SAMPLE');
         portfolioUrls.push(r.url);
       }
 

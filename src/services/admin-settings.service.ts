@@ -37,15 +37,16 @@ export const adminSettingsService = {
   },
 
   async getCountries(): Promise<Country[]> {
-    return apiClient.get('/admin/countries');
+    const res = await apiClient.post<{ countries: Country[]; total: number }>('/countries/list', {});
+    return res.countries;
   },
 
   async addCountry(data: Omit<Country, 'id'>): Promise<Country> {
-    return apiClient.post('/admin/countries', data);
+    return apiClient.post('/admin/countries/create', data);
   },
 
   async removeCountry(id: string): Promise<void> {
-    return apiClient.delete(`/admin/countries/${id}`);
+    return apiClient.post(`/admin/countries/${id}/delete`, {});
   },
 
   async getNotificationTemplates(): Promise<NotificationTemplate[]> {

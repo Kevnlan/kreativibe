@@ -8,30 +8,30 @@ import {
 
 export const countryService = {
   async getCountries(): Promise<CountryListResponse> {
-    return apiClient.get('/countries');
+    return apiClient.post('/countries/list', {});
   },
 
   async getCountryById(id: string): Promise<Country> {
-    return apiClient.get(`/countries/${id}`);
+    return apiClient.post(`/countries/${id}/get`, {});
   },
 
   async createCountry(data: CreateCountryRequest): Promise<Country> {
-    return apiClient.post('/admin/countries', data);
+    return apiClient.post('/admin/countries/create', data);
   },
 
   async updateCountry(id: string, data: UpdateCountryRequest): Promise<Country> {
-    return apiClient.put(`/admin/countries/${id}`, data);
+    return apiClient.post(`/admin/countries/${id}/update`, data);
   },
 
   async deleteCountry(id: string): Promise<void> {
-    return apiClient.delete(`/admin/countries/${id}`);
+    return apiClient.post(`/admin/countries/${id}/delete`, {});
   },
 
   async getCountryConfig(id: string): Promise<Country['config']> {
-    return apiClient.get(`/countries/${id}/config`);
+    return apiClient.post(`/countries/${id}/config`, {});
   },
 
   async updateCountryConfig(id: string, config: Country['config']): Promise<Country> {
-    return apiClient.put(`/admin/countries/${id}/config`, config);
+    return apiClient.post(`/admin/countries/${id}/config/update`, config);
   },
 };

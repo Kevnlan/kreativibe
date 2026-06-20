@@ -32,7 +32,7 @@ export const kycService = {
   },
 
   async getKycStatus(): Promise<{ status: string; adminComments?: string }> {
-    return apiClient.get('/kyc/status');
+    return apiClient.post('/kyc/status', {});
   },
 };
 

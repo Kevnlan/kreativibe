@@ -322,12 +322,22 @@ class ApiClient {
   }
 
   // File upload method
-  async uploadFile(file: File, onProgress?: (progress: number) => void): Promise<any> {
+  async uploadFile(file: File, onProgress?: (progress: number) => void, fields?: Record<string, string>): Promise<any> {
+    return this.uploadFileTo('/upload', file, fields, onProgress);
+  }
+
+  // Generic file upload to an arbitrary endpoint (e.g. /tax/documents/upload)
+  async uploadFileTo<T>(url: string, file: File, fields?: Record<string, string>, onProgress?: (progress: number) => void): Promise<T> {
     const formData = new FormData();
     formData.append('file', file);
+    if (fields) {
+      for (const [key, value] of Object.entries(fields)) {
+        formData.append(key, value);
+      }
+    }
 
     try {
-      const response = await this.client.post('/upload', formData, {
+      const response = await this.client.post(url, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

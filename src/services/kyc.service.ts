@@ -37,10 +37,10 @@ export const kycService = {
   },
 
   async getKycStatus(): Promise<KycStatus> {
-    return apiClient.get('/kyc/status');
+    return apiClient.post('/kyc/status', {});
   },
 
   async resubmitKyc(data: Partial<KycSubmissionData>): Promise<{ message: string }> {
-    return apiClient.put('/kyc/resubmit', data);
+    return apiClient.post('/kyc/resubmit', data);
   },
 };

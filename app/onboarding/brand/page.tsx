@@ -96,19 +96,19 @@ export default function BrandOnboardingPage() {
       let taxComplianceUrl = '';
 
       if (kycData.logoFile) {
-        const r = await uploadService.uploadFile(kycData.logoFile);
+        const r = await uploadService.uploadFile(kycData.logoFile, undefined, 'BRAND_LOGO');
         logoUrl = r.url;
       }
       if (kycData.coverImageFile) {
-        const r = await uploadService.uploadFile(kycData.coverImageFile);
+        const r = await uploadService.uploadFile(kycData.coverImageFile, undefined, 'BRAND_COVER');
         coverImageUrl = r.url;
       }
       if (kycData.registrationCertFile) {
-        const r = await uploadService.uploadFile(kycData.registrationCertFile);
+        const r = await uploadService.uploadFile(kycData.registrationCertFile, undefined, 'BRAND_DOCUMENT');
         registrationCertUrl = r.url;
       }
       if (kycData.taxComplianceFile) {
-        const r = await uploadService.uploadFile(kycData.taxComplianceFile);
+        const r = await uploadService.uploadFile(kycData.taxComplianceFile, undefined, 'BRAND_DOCUMENT');
         taxComplianceUrl = r.url;
       }
 

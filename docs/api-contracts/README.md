@@ -1,38 +1,8 @@
 # API Contract Documentation
 
-This directory contains the API contract specifications for the Kreativibe platform. These contracts define the expected request/response formats for all backend API endpoints.
+This directory contains the API contract specifications for the Kreativibe platform — a creator/brand influencer-marketing marketplace (campaign creation, creator applications, KYC verification, wallets/payouts, and content management). These contracts define the expected request/response formats for all backend API endpoints, serving as a frontend development guide and a backend implementation reference so both sides stay aligned.
 
-## Purpose
-
-These contracts serve as:
-1. **Frontend Development Guide** - TypeScript types are already defined in `src/types/api-contracts/`
-2. **Backend Team Reference** - Clear specifications for implementing API endpoints
-3. **Integration Checklist** - Validation that frontend and backend are aligned
-
-## Contract Files
-
-### Authentication & User Management
-- `auth.md` - Authentication endpoints (login, signup, 2FA, password reset)
-- `users.md` - User management and profile endpoints
-
-### Country & Configuration
-- `countries.md` - Country management and configuration
-- `config.md` - System configuration endpoints
-
-### Creative Features
-- `kyc.md` - KYC verification and validation
-- `wallet.md` - Wallet and transaction management
-- `withdrawals.md` - Withdrawal requests and processing
-- `content.md` - Content upload and management
-
-### Brand Features
-- `brand.md` - Brand verification and management
-- `purchases.md` - Purchase history and transactions
-- `social.md` - Social media account integration
-- `analytics.md` - Campaign analytics and reporting
-
-### Admin Features
-- `admin.md` - Admin operations and oversight
+See `INDEX.md` for the full list of contract files by area.
 
 ## Contract Format
 
