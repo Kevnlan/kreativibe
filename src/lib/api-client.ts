@@ -301,6 +301,16 @@ class ApiClient {
     }
   }
 
+  // Generic PATCH method
+  async patch<T>(url: string, data?: any): Promise<T> {
+    try {
+      const response = await this.client.patch(url, data);
+      return this.unwrapEnvelope<T>(response.data);
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   // Generic DELETE method
   async delete<T>(url: string): Promise<T> {
     try {

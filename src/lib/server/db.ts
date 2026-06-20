@@ -1,5 +1,7 @@
 type Role = 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT';
 type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
+export type CampaignStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'CANCELLED';
+export type ApplicationStatus = 'PENDING' | 'UNDER_REVIEW' | 'SHORTLISTED' | 'ACCEPTED' | 'REJECTED';
 
 export interface DbUser {
   id: string;
@@ -81,6 +83,70 @@ export interface DbEmailVerification {
   createdAt: string;
 }
 
+export interface DbCampaignBrief {
+  title: string;
+  objective: string;
+  targetAudience: {
+    demographics: string[];
+    interests: string[];
+    location?: string;
+  };
+  platforms: string[];
+  contentType: string[];
+  budget: { min: number; max: number; currency: string };
+  timeline: { startDate: string; endDate: string; milestones: string[] };
+  deliverables: string[];
+  kpis?: string[];
+  additionalNotes?: string;
+}
+
+export interface DbCampaign {
+  id: string;
+  brandUserId: string;
+  title: string;
+  objective: string;
+  description?: string;
+  audience?: string;
+  platforms: string[];
+  contentTypes: string[];
+  categories: string[];
+  deliverables: string[];
+  milestones: string[];
+  messaging?: string;
+  tone?: string;
+  budgetMin: number;
+  budgetMax: number;
+  currency: string;
+  startDate?: string;
+  endDate?: string;
+  status: CampaignStatus;
+  source: 'manual' | 'ai';
+  brief?: DbCampaignBrief;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DbCampaignApplication {
+  id: string;
+  campaignId: string;
+  creatorUserId: string;
+  message: string;
+  proposedRate?: number;
+  currency?: string;
+  status: ApplicationStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DbAiConversation {
+  id: string;
+  brandUserId: string;
+  title: string;
+  messages: { role: 'user' | 'assistant'; content: string }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 class Database {
   users = new Map<string, DbUser>();
   creatorProfiles = new Map<string, DbCreatorProfile>(); // keyed by userId
@@ -88,6 +154,9 @@ class Database {
   refreshTokens = new Map<string, DbRefreshToken>(); // keyed by token
   passwordResets = new Map<string, DbPasswordReset>(); // keyed by token
   emailVerifications = new Map<string, DbEmailVerification>(); // keyed by token
+  campaigns = new Map<string, DbCampaign>();
+  applications = new Map<string, DbCampaignApplication>();
+  aiConversations = new Map<string, DbAiConversation>();
 
   findUserByEmail(email: string): DbUser | undefined {
     for (const user of this.users.values()) {
@@ -209,6 +278,101 @@ class Database {
     for (const [key, ev] of this.emailVerifications.entries()) {
       if (ev.userId === userId) this.emailVerifications.delete(key);
     }
+  }
+
+  createCampaign(data: Omit<DbCampaign, 'id' | 'createdAt' | 'updatedAt'>): DbCampaign {
+    const now = new Date().toISOString();
+    const campaign: DbCampaign = { id: crypto.randomUUID(), ...data, createdAt: now, updatedAt: now };
+    this.campaigns.set(campaign.id, campaign);
+    return campaign;
+  }
+
+  findCampaignById(id: string): DbCampaign | undefined {
+    return this.campaigns.get(id);
+  }
+
+  findCampaignsByBrand(brandUserId: string): DbCampaign[] {
+    return [...this.campaigns.values()].filter(c => c.brandUserId === brandUserId);
+  }
+
+  findActiveCampaigns(): DbCampaign[] {
+    return [...this.campaigns.values()].filter(c => c.status === 'ACTIVE');
+  }
+
+  updateCampaign(id: string, updates: Partial<Omit<DbCampaign, 'id' | 'brandUserId' | 'createdAt'>>): DbCampaign | undefined {
+    const campaign = this.campaigns.get(id);
+    if (!campaign) return undefined;
+    const updated = { ...campaign, ...updates, updatedAt: new Date().toISOString() };
+    this.campaigns.set(id, updated);
+    return updated;
+  }
+
+  deleteCampaign(id: string): boolean {
+    return this.campaigns.delete(id);
+  }
+
+  createApplication(data: Omit<DbCampaignApplication, 'id' | 'createdAt' | 'updatedAt'>): DbCampaignApplication {
+    const now = new Date().toISOString();
+    const application: DbCampaignApplication = { id: crypto.randomUUID(), ...data, createdAt: now, updatedAt: now };
+    this.applications.set(application.id, application);
+    return application;
+  }
+
+  findApplicationById(id: string): DbCampaignApplication | undefined {
+    return this.applications.get(id);
+  }
+
+  findApplicationsByCampaign(campaignId: string): DbCampaignApplication[] {
+    return [...this.applications.values()].filter(a => a.campaignId === campaignId);
+  }
+
+  findApplicationsByCreator(creatorUserId: string): DbCampaignApplication[] {
+    return [...this.applications.values()].filter(a => a.creatorUserId === creatorUserId);
+  }
+
+  findApplication(campaignId: string, creatorUserId: string): DbCampaignApplication | undefined {
+    return [...this.applications.values()].find(a => a.campaignId === campaignId && a.creatorUserId === creatorUserId);
+  }
+
+  updateApplication(id: string, updates: Partial<Omit<DbCampaignApplication, 'id' | 'campaignId' | 'creatorUserId' | 'createdAt'>>): DbCampaignApplication | undefined {
+    const application = this.applications.get(id);
+    if (!application) return undefined;
+    const updated = { ...application, ...updates, updatedAt: new Date().toISOString() };
+    this.applications.set(id, updated);
+    return updated;
+  }
+
+  deleteApplication(id: string): boolean {
+    return this.applications.delete(id);
+  }
+
+  createAiConversation(data: Omit<DbAiConversation, 'id' | 'createdAt' | 'updatedAt'>): DbAiConversation {
+    const now = new Date().toISOString();
+    const conversation: DbAiConversation = { id: crypto.randomUUID(), ...data, createdAt: now, updatedAt: now };
+    this.aiConversations.set(conversation.id, conversation);
+    return conversation;
+  }
+
+  findAiConversationById(id: string): DbAiConversation | undefined {
+    return this.aiConversations.get(id);
+  }
+
+  findAiConversationsByBrand(brandUserId: string): DbAiConversation[] {
+    return [...this.aiConversations.values()]
+      .filter(c => c.brandUserId === brandUserId)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  updateAiConversation(id: string, updates: Partial<Omit<DbAiConversation, 'id' | 'brandUserId' | 'createdAt'>>): DbAiConversation | undefined {
+    const conversation = this.aiConversations.get(id);
+    if (!conversation) return undefined;
+    const updated = { ...conversation, ...updates, updatedAt: new Date().toISOString() };
+    this.aiConversations.set(id, updated);
+    return updated;
+  }
+
+  deleteAiConversation(id: string): boolean {
+    return this.aiConversations.delete(id);
   }
 }
 

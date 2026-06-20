@@ -7,14 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { formatCurrency } from '@/lib/utils';
 import { campaignService } from '@/services/campaign.service';
-import { Campaign } from '@/types/campaign.types';
+import { Campaign, CampaignStatus } from '@/types/campaign.types';
 
-const statusStyles: Record<string, string> = {
-  active: 'bg-green-100 text-green-700',
-  completed: 'bg-gray-100 text-gray-600',
-  draft: 'bg-yellow-100 text-yellow-700',
-  paused: 'bg-orange-100 text-orange-700',
-  cancelled: 'bg-red-100 text-red-700',
+const statusStyles: Record<CampaignStatus, string> = {
+  ACTIVE: 'bg-green-100 text-green-700',
+  COMPLETED: 'bg-gray-100 text-gray-600',
+  DRAFT: 'bg-yellow-100 text-yellow-700',
+  PAUSED: 'bg-orange-100 text-orange-700',
+  CANCELLED: 'bg-red-100 text-red-700',
 };
 
 export default function CampaignsPage() {
@@ -28,21 +28,21 @@ export default function CampaignsPage() {
   useEffect(() => {
     campaignService
       .list()
-      .then(setCampaigns)
+      .then(res => setCampaigns(res.items))
       .catch(() => setError('Failed to load campaigns. Please try again.'))
       .finally(() => setIsLoading(false));
   }, []);
 
   const filtered = campaigns.filter(c => {
-    const matchesFilter = filter === 'all' || c.status === filter;
-    const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.niche.toLowerCase().includes(search.toLowerCase());
+    const matchesFilter = filter === 'all' || c.status === filter.toUpperCase();
+    const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase()) ||
+      c.categories.some(category => category.toLowerCase().includes(search.toLowerCase()));
     return matchesFilter && matchesSearch;
   });
 
-  const totalBudget = campaigns.reduce((s, c) => s + c.budget, 0);
-  const totalSpent = campaigns.reduce((s, c) => s + c.spent, 0);
-  const activeCampaigns = campaigns.filter(c => c.status === 'active').length;
+  const totalBudget = campaigns.reduce((s, c) => s + c.budgetMax, 0);
+  const activeCampaigns = campaigns.filter(c => c.status === 'ACTIVE').length;
+  const draftCampaigns = campaigns.filter(c => c.status === 'DRAFT').length;
 
   return (
     <div className="space-y-6">
@@ -75,8 +75,8 @@ export default function CampaignsPage() {
         {[
           { label: 'Total Campaigns', value: campaigns.length, icon: <TrendingUp className="h-4 w-4" />, color: 'text-blue-600' },
           { label: 'Active Now', value: activeCampaigns, icon: <Calendar className="h-4 w-4" />, color: 'text-green-600' },
+          { label: 'Drafts', value: draftCampaigns, icon: <Users className="h-4 w-4" />, color: 'text-orange-600' },
           { label: 'Total Budget', value: formatCurrency(totalBudget), icon: <DollarSign className="h-4 w-4" />, color: 'text-purple-600' },
-          { label: 'Total Spent', value: formatCurrency(totalSpent), icon: <Users className="h-4 w-4" />, color: 'text-orange-600' },
         ].map(s => (
           <Card key={s.label}>
             <CardContent className="pt-5">
@@ -136,10 +136,8 @@ export default function CampaignsPage() {
                   <tr className="border-b border-border bg-muted/30">
                     <th className="text-left px-5 py-3 font-medium text-muted-foreground">Campaign</th>
                     <th className="text-left px-5 py-3 font-medium text-muted-foreground">Status</th>
-                    <th className="text-left px-5 py-3 font-medium text-muted-foreground">Creators</th>
+                    <th className="text-left px-5 py-3 font-medium text-muted-foreground">Platforms</th>
                     <th className="text-left px-5 py-3 font-medium text-muted-foreground">Budget</th>
-                    <th className="text-left px-5 py-3 font-medium text-muted-foreground">Spent</th>
-                    <th className="text-left px-5 py-3 font-medium text-muted-foreground">Engagement</th>
                     <th className="text-left px-5 py-3 font-medium text-muted-foreground">Dates</th>
                     <th className="px-5 py-3" />
                   </tr>
@@ -148,24 +146,26 @@ export default function CampaignsPage() {
                   {filtered.map(c => (
                     <tr key={c.id} className="hover:bg-muted/20 transition-colors">
                       <td className="px-5 py-4">
-                        <p className="font-medium text-foreground">{c.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{c.platform} · {c.niche}</p>
+                        <p className="font-medium text-foreground">{c.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{c.categories.join(', ') || '—'}</p>
                       </td>
                       <td className="px-5 py-4">
                         <span className={`inline-flex text-xs px-2.5 py-0.5 rounded-full font-medium capitalize ${statusStyles[c.status]}`}>
-                          {c.status}
+                          {c.status.toLowerCase()}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-muted-foreground">{c.creators}</td>
-                      <td className="px-5 py-4 font-medium">{formatCurrency(c.budget)}</td>
-                      <td className="px-5 py-4 text-muted-foreground">{c.spent > 0 ? formatCurrency(c.spent) : '—'}</td>
-                      <td className="px-5 py-4 text-muted-foreground">{c.engagement > 0 ? `${c.engagement}%` : '—'}</td>
+                      <td className="px-5 py-4 text-muted-foreground">{c.platforms.join(', ')}</td>
+                      <td className="px-5 py-4 font-medium">
+                        {formatCurrency(c.budgetMin)} - {formatCurrency(c.budgetMax)}
+                      </td>
                       <td className="px-5 py-4 text-xs text-muted-foreground">
-                        <p>{c.startDate}</p>
-                        <p>{c.endDate}</p>
+                        <p>{c.startDate ? new Date(c.startDate).toLocaleDateString() : '—'}</p>
+                        <p>{c.endDate ? new Date(c.endDate).toLocaleDateString() : '—'}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <Button variant="outline" size="sm">View</Button>
+                        <Button variant="outline" size="sm" onClick={() => router.push(`/dashboard/brand/campaigns/${c.id}`)}>
+                          View
+                        </Button>
                       </td>
                     </tr>
                   ))}

@@ -77,15 +77,20 @@ export default function CreateCampaignPage() {
     setError(null);
     try {
       await campaignService.create({
-        name: brief.title,
+        title: brief.title,
         objective: brief.objective,
         audience: [...brief.targetAudience.demographics, ...brief.targetAudience.interests].join(', '),
-        budget: brief.budget.max,
+        budgetMin: brief.budget.min,
+        budgetMax: brief.budget.max,
+        currency: brief.budget.currency,
         platforms: brief.platforms,
         contentTypes: brief.contentType,
+        deliverables: brief.deliverables,
+        milestones: brief.timeline.milestones,
         startDate: brief.timeline.startDate,
         endDate: brief.timeline.endDate,
         source: 'ai',
+        brief,
       });
       router.push('/dashboard/brand/campaigns');
     } catch {

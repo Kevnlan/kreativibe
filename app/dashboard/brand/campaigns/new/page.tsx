@@ -77,14 +77,16 @@ export default function NewCampaignPage() {
     setError(null);
     try {
       await campaignService.create({
-        name: data.name,
+        title: data.name,
         objective: data.objective,
         audience: data.audience,
-        budget: budgetNum,
+        budgetMin: budgetNum,
+        budgetMax: budgetNum,
+        currency: 'KES',
         platforms: data.platforms,
         contentTypes: data.contentTypes,
         startDate: data.startDate || undefined,
-        endDate: data.duration || undefined,
+        milestones: data.duration ? [`Duration: ${data.duration}`] : undefined,
         messaging: data.messaging,
         tone: data.tone,
         source: 'manual',

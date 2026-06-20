@@ -1,4 +1,12 @@
 import { CreatorProfile } from '../types/auth';
+import {
+  Campaign,
+  RawCampaign,
+  RawCampaignListResponse,
+  CampaignListResponse,
+  CampaignApplication,
+  RawCampaignApplication,
+} from '../types/campaign.types';
 
 export interface RawCreatorProfile {
   id: string;
@@ -46,4 +54,47 @@ export function normalizeCreatorProfile(raw: RawCreatorProfile | null | undefine
     totalEarnings: totalEarnings != null ? Number(totalEarnings) : 0,
     pricing,
   } as CreatorProfile;
+}
+
+// Backend returns budgetMin/budgetMax as decimal strings and nullable fields as
+// null rather than undefined; the rest of the app works with plain numbers.
+export function normalizeCampaign(raw: RawCampaign): Campaign {
+  const { description, audience, messaging, tone, startDate, endDate, brief, budgetMin, budgetMax, _count, brandProfile, ...rest } = raw;
+
+  return {
+    ...rest,
+    description: description ?? undefined,
+    audience: audience ?? undefined,
+    messaging: messaging ?? undefined,
+    tone: tone ?? undefined,
+    startDate: startDate ?? undefined,
+    endDate: endDate ?? undefined,
+    brief: brief ?? undefined,
+    budgetMin: Number(budgetMin),
+    budgetMax: Number(budgetMax),
+    applicationCount: _count?.applications ?? 0,
+    brandProfile: brandProfile ? { ...brandProfile, logo: brandProfile.logo ?? undefined } : undefined,
+  };
+}
+
+export function normalizeCampaignList(raw: RawCampaignListResponse): CampaignListResponse {
+  return { items: raw.items.map(normalizeCampaign), total: raw.total, page: raw.page, limit: raw.limit };
+}
+
+// proposedRate is a decimal string from the backend like budgetMin/budgetMax above.
+export function normalizeApplication(raw: RawCampaignApplication): CampaignApplication {
+  const { proposedRate, currency, creatorProfile, ...rest } = raw;
+
+  return {
+    ...rest,
+    proposedRate: proposedRate != null ? Number(proposedRate) : undefined,
+    currency: currency ?? undefined,
+    creatorProfile: creatorProfile
+      ? { ...creatorProfile, bio: creatorProfile.bio ?? undefined, avatar: creatorProfile.avatar ?? undefined }
+      : undefined,
+  };
+}
+
+export function normalizeApplicationList(raw: RawCampaignApplication[]): CampaignApplication[] {
+  return raw.map(normalizeApplication);
 }
