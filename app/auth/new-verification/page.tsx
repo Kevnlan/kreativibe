@@ -110,7 +110,7 @@ function NewVerificationContent() {
                   </p>
                 )}
                 {error && (
-                  <p className="text-sm text-destructive">{error}</p>
+                  <p className="text-sm text-red-500 font-medium">{error}</p>
                 )}
                 <Link href="/auth/login">
                   <Button className="w-full" variant="outline">Back to login</Button>

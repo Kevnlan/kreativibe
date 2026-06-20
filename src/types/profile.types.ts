@@ -43,6 +43,7 @@ export interface CreatorProfileFull {
   facebook?: string;
   twitter?: string;
   behance?: string;
+  categories: string[];
   isVerified: boolean;
   verificationStatus: KycStatus;
   averageRating: number;

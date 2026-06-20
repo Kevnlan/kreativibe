@@ -10,6 +10,10 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        destructive: {
+          DEFAULT: "#EF4444",
+          foreground: "#ffffff",
+        },
         // Brand colors
         brand: {
           blue: "#0066FF",

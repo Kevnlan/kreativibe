@@ -1,12 +1,13 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { AuthResponse, ApiError } from '../types/auth';
+import { normalizeCreatorProfile } from './normalize';
 
 class ApiClient {
   private client: AxiosInstance;
   private baseURL: string;
 
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3050/api';
     
     this.client = axios.create({
       baseURL: this.baseURL,
@@ -104,7 +105,7 @@ class ApiClient {
         refreshToken,
       });
 
-      const { accessToken, refreshToken: newRefreshToken } = response.data;
+      const { accessToken, refreshToken: newRefreshToken } = response.data.data;
       this.setTokens(accessToken, newRefreshToken);
     } catch (error) {
       throw new Error('Failed to refresh token');
@@ -142,14 +143,14 @@ class ApiClient {
         password,
       });
 
-      const { user, accessToken, refreshToken, creatorProfile, brandProfile } = response.data;
+      const { user, accessToken, refreshToken, creatorProfile, brandProfile } = response.data.data;
       this.setTokens(accessToken, refreshToken);
 
       return {
         user,
         accessToken,
         refreshToken,
-        creatorProfile,
+        creatorProfile: normalizeCreatorProfile(creatorProfile) || undefined,
         brandProfile,
       };
     } catch (error) {
@@ -159,7 +160,7 @@ class ApiClient {
 
   async signup(email: string, password: string, name: string, role: 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT', countryId?: string): Promise<AuthResponse> {
     try {
-      const response = await this.client.post('/auth/register', {
+      const response = await this.client.post('/auth/signup', {
         email,
         password,
         name,
@@ -167,14 +168,14 @@ class ApiClient {
         countryId,
       });
 
-      const { user, accessToken, refreshToken, creatorProfile, brandProfile } = response.data;
+      const { user, accessToken, refreshToken, creatorProfile, brandProfile } = response.data.data;
       this.setTokens(accessToken, refreshToken);
 
       return {
         user,
         accessToken,
         refreshToken,
-        creatorProfile,
+        creatorProfile: normalizeCreatorProfile(creatorProfile) || undefined,
         brandProfile,
       };
     } catch (error) {
@@ -184,7 +185,8 @@ class ApiClient {
 
   async logout(): Promise<void> {
     try {
-      await this.client.post('/auth/logout');
+      const refreshToken = this.getRefreshToken();
+      await this.client.post('/auth/logout', { refreshToken });
     } catch (error) {
       // Continue with logout even if API call fails
       console.error('Logout API call failed:', error);
@@ -229,7 +231,12 @@ class ApiClient {
   async getCurrentUser(): Promise<any> {
     try {
       const response = await this.client.get('/auth/me');
-      return response.data;
+      const { user, creatorProfile, brandProfile } = response.data.data;
+      return {
+        user,
+        creatorProfile: normalizeCreatorProfile(creatorProfile) || undefined,
+        brandProfile,
+      };
     } catch (error) {
       throw this.handleError(error);
     }
@@ -238,7 +245,7 @@ class ApiClient {
   async updateProfile(data: any): Promise<any> {
     try {
       const response = await this.client.put('/user/profile', data);
-      return response.data;
+      return response.data.data;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -255,11 +262,20 @@ class ApiClient {
     }
   }
 
+  // Unwraps the backend's { success, data } envelope, falling back to the raw body
+  // for endpoints that don't use the envelope (e.g. return just a message).
+  private unwrapEnvelope<T>(body: any): T {
+    if (body && typeof body === 'object' && 'data' in body) {
+      return body.data;
+    }
+    return body;
+  }
+
   // Generic GET method
   async get<T>(url: string, params?: any): Promise<T> {
     try {
       const response = await this.client.get(url, { params });
-      return response.data;
+      return this.unwrapEnvelope<T>(response.data);
     } catch (error) {
       throw this.handleError(error);
     }
@@ -269,7 +285,7 @@ class ApiClient {
   async post<T>(url: string, data?: any): Promise<T> {
     try {
       const response = await this.client.post(url, data);
-      return response.data;
+      return this.unwrapEnvelope<T>(response.data);
     } catch (error) {
       throw this.handleError(error);
     }
@@ -279,7 +295,7 @@ class ApiClient {
   async put<T>(url: string, data?: any): Promise<T> {
     try {
       const response = await this.client.put(url, data);
-      return response.data;
+      return this.unwrapEnvelope<T>(response.data);
     } catch (error) {
       throw this.handleError(error);
     }
@@ -289,7 +305,7 @@ class ApiClient {
   async delete<T>(url: string): Promise<T> {
     try {
       const response = await this.client.delete(url);
-      return response.data;
+      return this.unwrapEnvelope<T>(response.data);
     } catch (error) {
       throw this.handleError(error);
     }
@@ -313,7 +329,7 @@ class ApiClient {
         },
       });
 
-      return response.data;
+      return this.unwrapEnvelope(response.data);
     } catch (error) {
       throw this.handleError(error);
     }

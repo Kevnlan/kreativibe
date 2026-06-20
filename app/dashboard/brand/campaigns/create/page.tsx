@@ -2,128 +2,14 @@
 
 import { useState } from 'react';
 import { ConversationBuilder, Message } from '@/components/campaign/ConversationBuilder';
-import { ConversationHistory, Conversation } from '@/components/campaign/ConversationHistory';
+import { ConversationHistory } from '@/components/campaign/ConversationHistory';
 import { BriefGenerator, CampaignBrief } from '@/components/campaign/BriefGenerator';
 import { PackageRecommender, PackageOption } from '@/components/campaign/PackageRecommender';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-
-// Mock data for development
-const mockConversations: Conversation[] = [
-  {
-    id: '1',
-    title: 'Summer Fashion Campaign',
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-01-15T11:30:00Z',
-    messageCount: 12,
-    status: 'completed',
-    summary: 'Campaign targeting young adults for summer fashion collection',
-  },
-];
-
-const mockPackages: PackageOption[] = [
-  {
-    id: 'starter',
-    name: 'Starter Package',
-    description: 'Perfect for small businesses and first-time campaigns',
-    price: 50000,
-    currency: 'KES',
-    features: [
-      '3-5 influencers',
-      '10-15 content pieces',
-      'Basic analytics',
-      '1 month duration',
-      'Instagram & TikTok',
-    ],
-    recommended: false,
-    estimatedReach: 50000,
-    estimatedEngagement: 5000,
-    suitableFor: ['Small Business', 'First Campaign', 'Limited Budget'],
-  },
-  {
-    id: 'growth',
-    name: 'Growth Package',
-    description: 'Ideal for growing brands looking to expand their reach',
-    price: 150000,
-    currency: 'KES',
-    features: [
-      '8-12 influencers',
-      '25-40 content pieces',
-      'Advanced analytics',
-      '2 month duration',
-      'Multi-platform support',
-      'Dedicated account manager',
-    ],
-    recommended: true,
-    estimatedReach: 200000,
-    estimatedEngagement: 25000,
-    suitableFor: ['Growing Brand', 'Multi-platform', 'Extended Campaign'],
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise Package',
-    description: 'Comprehensive solution for large-scale campaigns',
-    price: 500000,
-    currency: 'KES',
-    features: [
-      '20+ influencers',
-      '50+ content pieces',
-      'Premium analytics dashboard',
-      '3 month duration',
-      'All platforms',
-      '24/7 support',
-      'Custom integrations',
-    ],
-    recommended: false,
-    estimatedReach: 1000000,
-    estimatedEngagement: 150000,
-    suitableFor: ['Enterprise', 'Large Campaign', 'Full Service'],
-  },
-];
-
-const mockBrief: CampaignBrief = {
-  title: 'Summer Fashion Collection Launch',
-  objective: 'Promote the new summer fashion collection to young adults aged 18-30, driving brand awareness and sales through influencer partnerships.',
-  targetAudience: {
-    demographics: ['18-30 years old', 'Urban dwellers', 'Fashion-conscious'],
-    interests: ['Fashion', 'Lifestyle', 'Social Media', 'Trends'],
-    location: 'Kenya',
-  },
-  platforms: ['Instagram', 'TikTok', 'YouTube'],
-  contentType: ['Photos', 'Videos', 'Stories', 'Reels'],
-  budget: {
-    min: 100000,
-    max: 200000,
-    currency: 'KES',
-  },
-  timeline: {
-    startDate: '2024-06-01',
-    endDate: '2024-08-31',
-    milestones: [
-      'Influencer selection - Week 1',
-      'Content creation - Weeks 2-4',
-      'Campaign launch - Week 5',
-      'Performance review - Week 12',
-    ],
-  },
-  deliverables: [
-    '15 Instagram posts',
-    '20 TikTok videos',
-    '10 YouTube shorts',
-    '30 Instagram stories',
-    'Monthly performance reports',
-  ],
-  kpis: [
-    'Reach: 500,000 unique users',
-    'Engagement rate: 5%+',
-    'Website traffic: 20,000 visits',
-    'Sales conversion: 2%+',
-    'Brand mentions: 500+',
-  ],
-  additionalNotes: 'Focus on sustainable fashion messaging and local influencers.',
-};
+import { campaignService } from '@/services/campaign.service';
 
 export default function CreateCampaignPage() {
   const router = useRouter();
@@ -131,43 +17,82 @@ export default function CreateCampaignPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [brief, setBrief] = useState<CampaignBrief | null>(null);
+  const [packages, setPackages] = useState<PackageOption[]>([]);
+  const [isLoadingPackages, setIsLoadingPackages] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleBack = () => {
     router.push('/dashboard/brand/campaigns');
   };
 
-  const handleMessageSend = async (message: string): Promise<string> => {
-    // Simulate AI response
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return `I understand you're interested in "${message}". Let me help you create a campaign brief. Can you tell me more about your target audience and budget?`;
+  const handleMessageSend = async (message: string): Promise<{ content: string; suggestions?: string[] }> => {
+    const history = [...messages.map(m => ({ role: m.role, content: m.content })), { role: 'user' as const, content: message }];
+    const response = await campaignService.aiChat(history);
+    return { content: response.reply, suggestions: response.suggestions };
   };
 
-  const handleGenerateBrief = () => {
+  const handleGenerateBrief = async () => {
     setIsGeneratingBrief(true);
-    setTimeout(() => {
-      setBrief(mockBrief);
-      setIsGeneratingBrief(false);
+    setError(null);
+    try {
+      const history = messages.map(m => ({ role: m.role, content: m.content }));
+      const generatedBrief = await campaignService.aiBrief(history);
+      setBrief(generatedBrief);
       setStep('brief');
-    }, 2000);
+    } catch {
+      setError('Failed to generate the campaign brief. Please try again.');
+    } finally {
+      setIsGeneratingBrief(false);
+    }
   };
 
   const handleSelectPackage = (packageId: string) => {
     setSelectedPackage(packageId);
   };
 
-  const handleSaveBrief = () => {
+  const handleSaveBrief = async () => {
+    if (!brief) return;
     setStep('package');
+    setIsLoadingPackages(true);
+    setError(null);
+    try {
+      const recommended = await campaignService.recommendPackages(brief);
+      setPackages(recommended);
+    } catch {
+      setError('Failed to load package recommendations.');
+    } finally {
+      setIsLoadingPackages(false);
+    }
   };
 
   const handleProceedToReview = () => {
     setStep('review');
   };
 
-  const handleSubmitCampaign = () => {
-    // In production, submit to API
-    console.log('Submitting campaign:', { brief, selectedPackage });
-    router.push('/dashboard/brand/campaigns');
+  const handleSubmitCampaign = async () => {
+    if (!brief) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await campaignService.create({
+        name: brief.title,
+        objective: brief.objective,
+        audience: [...brief.targetAudience.demographics, ...brief.targetAudience.interests].join(', '),
+        budget: brief.budget.max,
+        platforms: brief.platforms,
+        contentTypes: brief.contentType,
+        startDate: brief.timeline.startDate,
+        endDate: brief.timeline.endDate,
+        source: 'ai',
+      });
+      router.push('/dashboard/brand/campaigns');
+    } catch {
+      setError('Failed to create the campaign. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -192,12 +117,19 @@ export default function CreateCampaignPage() {
           <Button
             variant="brand"
             onClick={step === 'brief' ? handleSaveBrief : step === 'package' ? handleProceedToReview : handleSubmitCampaign}
+            disabled={isSubmitting}
             leftIcon={<Sparkles className="h-4 w-4" />}
           >
-            {step === 'brief' ? 'Continue to Packages' : step === 'package' ? 'Review Campaign' : 'Submit Campaign'}
+            {step === 'brief' ? 'Continue to Packages' : step === 'package' ? 'Review Campaign' : isSubmitting ? 'Submitting...' : 'Submit Campaign'}
           </Button>
         )}
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Progress Steps */}
       <div className="flex items-center gap-2">
@@ -239,9 +171,15 @@ export default function CreateCampaignPage() {
             />
           )}
 
-          {step === 'package' && brief && (
+          {step === 'package' && brief && isLoadingPackages && (
+            <div className="flex items-center justify-center py-16 text-muted-foreground">
+              Loading package recommendations...
+            </div>
+          )}
+
+          {step === 'package' && brief && !isLoadingPackages && (
             <PackageRecommender
-              packages={mockPackages}
+              packages={packages}
               budget={brief.budget}
               onSelectPackage={handleSelectPackage}
             />
@@ -251,7 +189,7 @@ export default function CreateCampaignPage() {
             <div className="space-y-6">
               <BriefGenerator brief={brief} isGenerating={false} />
               <PackageRecommender
-                packages={mockPackages}
+                packages={packages}
                 budget={brief.budget}
                 onSelectPackage={() => {}}
               />
@@ -261,8 +199,8 @@ export default function CreateCampaignPage() {
 
         <div className="space-y-6">
           <ConversationHistory
-            conversations={mockConversations}
-            onLoadConversation={(id) => console.log('Load conversation:', id)}
+            conversations={[]}
+            onLoadConversation={() => {}}
           />
         </div>
       </div>

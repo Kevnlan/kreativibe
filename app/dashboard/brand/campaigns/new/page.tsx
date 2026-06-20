@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, CheckCircle, Target, Users, Megaphone, Clock, FileText } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Target, Users, Megaphone, Clock, FileText, Loader2 } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, Input } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { campaignService } from '@/services/campaign.service';
 
 interface CampaignData {
   name: string;
@@ -47,6 +48,8 @@ export default function NewCampaignPage() {
     messaging: '',
     tone: '',
   });
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const updateField = (field: keyof CampaignData, value: string | string[]) => {
     setData(prev => ({ ...prev, [field]: value }));
@@ -69,33 +72,29 @@ export default function NewCampaignPage() {
     }
   };
 
-  const handleCreate = () => {
-    const newCampaign = {
-      id: Date.now(),
-      name: data.name,
-      status: 'draft',
-      creators: 0,
-      budget: budgetNum,
-      spent: 0,
-      engagement: 0,
-      startDate: data.startDate
-        ? new Date(data.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        : 'TBD',
-      endDate: data.duration,
-      platform: data.platforms.length > 1 ? 'Multi-platform' : data.platforms[0] || 'TBD',
-      niche: data.objective,
-      audience: data.audience,
-      contentTypes: data.contentTypes,
-      messaging: data.messaging,
-      tone: data.tone,
-    };
-
-    // Save to localStorage
-    const existing = JSON.parse(localStorage.getItem('user_campaigns') || '[]');
-    existing.push(newCampaign);
-    localStorage.setItem('user_campaigns', JSON.stringify(existing));
-
-    router.push('/dashboard/brand/campaigns');
+  const handleCreate = async () => {
+    setIsCreating(true);
+    setError(null);
+    try {
+      await campaignService.create({
+        name: data.name,
+        objective: data.objective,
+        audience: data.audience,
+        budget: budgetNum,
+        platforms: data.platforms,
+        contentTypes: data.contentTypes,
+        startDate: data.startDate || undefined,
+        endDate: data.duration || undefined,
+        messaging: data.messaging,
+        tone: data.tone,
+        source: 'manual',
+      });
+      router.push('/dashboard/brand/campaigns');
+    } catch (err) {
+      setError('Failed to create campaign. Please try again.');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const budgetNum = parseInt(data.budget) || 0;
@@ -421,12 +420,17 @@ export default function NewCampaignPage() {
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         ) : (
-          <Button onClick={handleCreate} className="bg-green-600 hover:bg-green-700">
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Create Campaign
+          <Button onClick={handleCreate} disabled={isCreating} className="bg-green-600 hover:bg-green-700">
+            {isCreating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+            {isCreating ? 'Creating...' : 'Create Campaign'}
           </Button>
         )}
       </div>
+      {error && (
+        <div className="max-w-3xl bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
     </div>
   );
 }

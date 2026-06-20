@@ -6,6 +6,7 @@ export interface User {
   countryId: string;
   avatar?: string;
   isEmailVerified: boolean;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -19,13 +20,20 @@ export interface CreatorProfile {
   location?: string;
   website?: string;
   instagram?: string;
+  instagramFollowers?: number;
   tiktok?: string;
+  tiktokFollowers?: number;
   youtube?: string;
+  youtubeFollowers?: number;
+  facebook?: string;
   twitter?: string;
+  behance?: string;
+  categories: string[];
   isVerified: boolean;
   verificationStatus: 'PENDING' | 'VERIFIED' | 'REJECTED';
   averageRating: number;
   totalReviews: number;
+  totalEarnings: number;
   pricing: {
     instagramStory?: number;
     instagramPost?: number;

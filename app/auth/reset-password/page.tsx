@@ -109,7 +109,7 @@ function ResetPasswordForm() {
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {error && (
-                <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-md">
+                <div className="bg-red-50 border border-red-300 text-red-600 text-sm p-3 rounded-md">
                   {error}
                 </div>
               )}

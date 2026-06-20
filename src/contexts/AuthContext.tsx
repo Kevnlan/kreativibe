@@ -49,6 +49,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     role,
     countryId: 'kenya-001',
     isEmailVerified: true,
+    isActive: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });

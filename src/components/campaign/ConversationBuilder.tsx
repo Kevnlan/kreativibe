@@ -16,7 +16,7 @@ export interface Message {
 }
 
 export interface ConversationBuilderProps {
-  onMessageSend: (message: string) => Promise<string>;
+  onMessageSend: (message: string) => Promise<{ content: string; suggestions?: string[] }>;
   onBriefGenerate?: () => void;
   initialMessages?: Message[];
 }
@@ -58,14 +58,9 @@ export function ConversationBuilder({
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response,
+        content: response.content,
         timestamp: new Date(),
-        suggestions: [
-          'Add more details about the target audience',
-          'Specify the campaign budget',
-          'Mention preferred platforms',
-          'Describe the campaign timeline',
-        ],
+        suggestions: response.suggestions,
       };
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {

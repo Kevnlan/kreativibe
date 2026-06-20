@@ -15,12 +15,17 @@ const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string().min(6, 'Please confirm your password'),
+  confirmPassword: z.string().min(1, 'Please confirm your password'),
   role: z.enum(['CREATOR', 'BRAND'], { message: 'Please select an account type' }),
   countryId: z.string().min(1, 'Please select your country'),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
+}).superRefine(({ password, confirmPassword }, ctx) => {
+  if (password !== confirmPassword) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Passwords don't match",
+      path: ['confirmPassword'],
+    });
+  }
 });
 
 type SignupFormData = z.infer<typeof signupSchema>;
@@ -212,13 +217,13 @@ export default function SignupPage() {
               })}
             </div>
             {errors.role?.message && (
-              <p className="text-sm text-destructive mt-2">{errors.role.message}</p>
+              <p className="text-sm text-red-500 font-medium mt-2">{errors.role.message}</p>
             )}
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {error && (
-              <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-lg">
+              <div className="bg-red-50 border border-red-300 text-red-600 text-sm p-3 rounded-lg">
                 {error}
               </div>
             )}

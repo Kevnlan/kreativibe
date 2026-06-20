@@ -23,9 +23,9 @@ interface CountrySelectorProps {
 }
 
 const DEFAULT_COUNTRIES: CountryOption[] = [
-  { id: '1', name: 'Kenya', code: 'KE', currency: 'KES', flag: '🇰🇪' },
-  { id: '2', name: 'Uganda', code: 'UG', currency: 'UGX', flag: '🇺🇬' },
-  { id: '3', name: 'Tanzania', code: 'TZ', currency: 'TZS', flag: '🇹🇿' },
+  { id: 'KE', name: 'Kenya', code: 'KE', currency: 'KES', flag: '🇰🇪' },
+  { id: 'UG', name: 'Uganda', code: 'UG', currency: 'UGX', flag: '🇺🇬' },
+  { id: 'TZ', name: 'Tanzania', code: 'TZ', currency: 'TZS', flag: '🇹🇿' },
 ];
 
 export function CountrySelector({

@@ -24,6 +24,10 @@
 .DS_Store
 *.pem
 
+# postman
+*.postman_collection.json
+*.postman_environment.json
+
 # debug
 npm-debug.log*
 yarn-debug.log*
@@ -41,3 +45,5 @@ yarn-error.log*
 next-env.d.ts
 *.md
 !README.md
+
+*.log

@@ -2,135 +2,35 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Users, DollarSign, Calendar, TrendingUp, CheckCircle } from 'lucide-react';
+import { Plus, Search, Users, DollarSign, Calendar, TrendingUp, Sparkles, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { formatCurrency } from '@/lib/utils';
-
-interface Campaign {
-  id: number;
-  name: string;
-  status: string;
-  creators: number;
-  budget: number;
-  spent: number;
-  engagement: number;
-  startDate: string;
-  endDate: string;
-  platform: string;
-  niche: string;
-}
-
-const demoCampaigns: Campaign[] = [
-  {
-    id: 1,
-    name: 'Summer Collection Launch',
-    status: 'active',
-    creators: 5,
-    budget: 15000,
-    spent: 9500,
-    engagement: 4.5,
-    startDate: 'Jan 15, 2026',
-    endDate: 'Feb 15, 2026',
-    platform: 'Instagram',
-    niche: 'Fashion',
-  },
-  {
-    id: 2,
-    name: 'Product Review Series',
-    status: 'active',
-    creators: 3,
-    budget: 8000,
-    spent: 4200,
-    engagement: 4.2,
-    startDate: 'Feb 1, 2026',
-    endDate: 'Feb 28, 2026',
-    platform: 'TikTok',
-    niche: 'Lifestyle',
-  },
-  {
-    id: 3,
-    name: 'Brand Awareness Q4',
-    status: 'completed',
-    creators: 8,
-    budget: 25000,
-    spent: 25000,
-    engagement: 4.8,
-    startDate: 'Oct 1, 2025',
-    endDate: 'Dec 31, 2025',
-    platform: 'Multi-platform',
-    niche: 'General',
-  },
-  {
-    id: 4,
-    name: 'New Year Promo',
-    status: 'completed',
-    creators: 4,
-    budget: 12000,
-    spent: 11800,
-    engagement: 5.1,
-    startDate: 'Dec 20, 2025',
-    endDate: 'Jan 10, 2026',
-    platform: 'Instagram',
-    niche: 'Lifestyle',
-  },
-  {
-    id: 5,
-    name: 'Fitness Challenge Sponsorship',
-    status: 'active',
-    creators: 6,
-    budget: 18000,
-    spent: 7200,
-    engagement: 6.3,
-    startDate: 'Feb 10, 2026',
-    endDate: 'Mar 10, 2026',
-    platform: 'YouTube',
-    niche: 'Fitness',
-  },
-  {
-    id: 6,
-    name: 'Valentine\'s Day Special',
-    status: 'draft',
-    creators: 0,
-    budget: 10000,
-    spent: 0,
-    engagement: 0,
-    startDate: 'Feb 10, 2026',
-    endDate: 'Feb 14, 2026',
-    platform: 'Instagram',
-    niche: 'Lifestyle',
-  },
-];
+import { campaignService } from '@/services/campaign.service';
+import { Campaign } from '@/types/campaign.types';
 
 const statusStyles: Record<string, string> = {
   active: 'bg-green-100 text-green-700',
   completed: 'bg-gray-100 text-gray-600',
   draft: 'bg-yellow-100 text-yellow-700',
+  paused: 'bg-orange-100 text-orange-700',
+  cancelled: 'bg-red-100 text-red-700',
 };
 
 export default function CampaignsPage() {
   const router = useRouter();
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'draft'>('all');
   const [search, setSearch] = useState('');
-  const [campaigns, setCampaigns] = useState<Campaign[]>(demoCampaigns);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load user-created campaigns from localStorage
-    try {
-      const stored = JSON.parse(localStorage.getItem('user_campaigns') || '[]') as Campaign[];
-      if (stored.length > 0) {
-        setCampaigns([...stored.reverse(), ...demoCampaigns]);
-        // Show success banner if a campaign was just created (within last 5 seconds)
-        const latest = stored[0];
-        if (latest && Date.now() - latest.id < 5000) {
-          setShowSuccess(true);
-          setTimeout(() => setShowSuccess(false), 4000);
-        }
-      }
-    } catch {
-      // ignore parse errors
-    }
+    campaignService
+      .list()
+      .then(setCampaigns)
+      .catch(() => setError('Failed to load campaigns. Please try again.'))
+      .finally(() => setIsLoading(false));
   }, []);
 
   const filtered = campaigns.filter(c => {
@@ -152,16 +52,21 @@ export default function CampaignsPage() {
           <h1 className="text-2xl font-bold text-foreground">Campaigns</h1>
           <p className="text-muted-foreground mt-1">Manage all your influencer marketing campaigns</p>
         </div>
-        <Button variant="brand" onClick={() => router.push('/dashboard/brand/campaigns/new')}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Campaign
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => router.push('/dashboard/brand/campaigns/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Campaign
+          </Button>
+          <Button variant="brand" onClick={() => router.push('/dashboard/brand/campaigns/create')}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            Create with AI
+          </Button>
+        </div>
       </div>
 
-      {showSuccess && (
-        <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg text-sm flex items-center gap-2 animate-in fade-in">
-          <CheckCircle className="h-4 w-4 flex-shrink-0" />
-          Campaign created successfully! It&apos;s now visible as a draft in your campaigns list.
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
         </div>
       )}
 
@@ -215,48 +120,59 @@ export default function CampaignsPage() {
       {/* Campaigns table */}
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="text-left px-5 py-3 font-medium text-muted-foreground">Campaign</th>
-                  <th className="text-left px-5 py-3 font-medium text-muted-foreground">Status</th>
-                  <th className="text-left px-5 py-3 font-medium text-muted-foreground">Creators</th>
-                  <th className="text-left px-5 py-3 font-medium text-muted-foreground">Budget</th>
-                  <th className="text-left px-5 py-3 font-medium text-muted-foreground">Spent</th>
-                  <th className="text-left px-5 py-3 font-medium text-muted-foreground">Engagement</th>
-                  <th className="text-left px-5 py-3 font-medium text-muted-foreground">Dates</th>
-                  <th className="px-5 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filtered.map(c => (
-                  <tr key={c.id} className="hover:bg-muted/20 transition-colors">
-                    <td className="px-5 py-4">
-                      <p className="font-medium text-foreground">{c.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{c.platform} · {c.niche}</p>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`inline-flex text-xs px-2.5 py-0.5 rounded-full font-medium capitalize ${statusStyles[c.status]}`}>
-                        {c.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-muted-foreground">{c.creators}</td>
-                    <td className="px-5 py-4 font-medium">{formatCurrency(c.budget)}</td>
-                    <td className="px-5 py-4 text-muted-foreground">{c.spent > 0 ? formatCurrency(c.spent) : '—'}</td>
-                    <td className="px-5 py-4 text-muted-foreground">{c.engagement > 0 ? `${c.engagement}%` : '—'}</td>
-                    <td className="px-5 py-4 text-xs text-muted-foreground">
-                      <p>{c.startDate}</p>
-                      <p>{c.endDate}</p>
-                    </td>
-                    <td className="px-5 py-4">
-                      <Button variant="outline" size="sm">View</Button>
-                    </td>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              Loading campaigns...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              No campaigns yet. Create your first one above.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="text-left px-5 py-3 font-medium text-muted-foreground">Campaign</th>
+                    <th className="text-left px-5 py-3 font-medium text-muted-foreground">Status</th>
+                    <th className="text-left px-5 py-3 font-medium text-muted-foreground">Creators</th>
+                    <th className="text-left px-5 py-3 font-medium text-muted-foreground">Budget</th>
+                    <th className="text-left px-5 py-3 font-medium text-muted-foreground">Spent</th>
+                    <th className="text-left px-5 py-3 font-medium text-muted-foreground">Engagement</th>
+                    <th className="text-left px-5 py-3 font-medium text-muted-foreground">Dates</th>
+                    <th className="px-5 py-3" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filtered.map(c => (
+                    <tr key={c.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="px-5 py-4">
+                        <p className="font-medium text-foreground">{c.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{c.platform} · {c.niche}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex text-xs px-2.5 py-0.5 rounded-full font-medium capitalize ${statusStyles[c.status]}`}>
+                          {c.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-muted-foreground">{c.creators}</td>
+                      <td className="px-5 py-4 font-medium">{formatCurrency(c.budget)}</td>
+                      <td className="px-5 py-4 text-muted-foreground">{c.spent > 0 ? formatCurrency(c.spent) : '—'}</td>
+                      <td className="px-5 py-4 text-muted-foreground">{c.engagement > 0 ? `${c.engagement}%` : '—'}</td>
+                      <td className="px-5 py-4 text-xs text-muted-foreground">
+                        <p>{c.startDate}</p>
+                        <p>{c.endDate}</p>
+                      </td>
+                      <td className="px-5 py-4">
+                        <Button variant="outline" size="sm">View</Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

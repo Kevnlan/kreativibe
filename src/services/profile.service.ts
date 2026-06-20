@@ -1,13 +1,16 @@
 import { apiClient } from '../lib/api-client';
+import { normalizeCreatorProfile, RawCreatorProfile } from '../lib/normalize';
 import { CreatorProfileFull, BrandProfileFull, UpdateCreatorProfileData, UpdateBrandProfileData, KycSubmitData, BrandOnboardingData } from '../types/profile.types';
 
 export const profileService = {
   async getCreatorProfile(): Promise<CreatorProfileFull> {
-    return apiClient.get('/creator/profile');
+    const raw = await apiClient.get<RawCreatorProfile>('/creator/profile');
+    return normalizeCreatorProfile(raw) as unknown as CreatorProfileFull;
   },
 
   async updateCreatorProfile(data: UpdateCreatorProfileData): Promise<CreatorProfileFull> {
-    return apiClient.put('/creator/profile', data);
+    const raw = await apiClient.put<RawCreatorProfile>('/creator/profile', data);
+    return normalizeCreatorProfile(raw) as unknown as CreatorProfileFull;
   },
 
   async getBrandProfile(): Promise<BrandProfileFull> {
