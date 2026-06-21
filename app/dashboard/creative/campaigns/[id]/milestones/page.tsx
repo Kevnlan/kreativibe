@@ -1,135 +1,138 @@
 'use client';
 
-import { useState } from 'react';
-import { MilestoneTracker, Milestone } from '@/components/campaign/MilestoneTracker';
+import { useState, useEffect } from 'react';
+import { MilestoneTracker, Milestone as TrackerMilestone } from '@/components/campaign/MilestoneTracker';
 import { DeliveryApproval, DeliveryData } from '@/components/campaign/DeliveryApproval';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Upload } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
+import { campaignService } from '@/services/campaign.service';
+import { Milestone, MilestoneStatus, MilestoneDeliveryItemType } from '@/types/campaign.types';
 
-// Mock data for development
-const mockMilestones: Milestone[] = [
-  {
-    id: '1',
-    title: 'Initial Content Creation',
-    description: 'Create and submit first batch of content for review',
-    dueDate: '2024-06-15',
-    amount: 45000,
-    currency: 'KES',
-    status: 'completed',
-    deliverables: [
-      '5 Instagram posts',
-      '8 TikTok videos',
-      '5 Instagram stories',
-    ],
-    submittedAt: '2024-06-10T14:30:00Z',
-    approvedAt: '2024-06-12T10:00:00Z',
-  },
-  {
-    id: '2',
-    title: 'Mid-Campaign Content',
-    description: 'Create and submit second batch of content',
-    dueDate: '2024-07-15',
-    amount: 60000,
-    currency: 'KES',
-    status: 'in_progress',
-    deliverables: [
-      '5 Instagram posts',
-      '8 TikTok videos',
-      '10 Instagram stories',
-      '5 YouTube shorts',
-    ],
-  },
-  {
-    id: '3',
-    title: 'Final Deliverables',
-    description: 'Submit all remaining content and final report',
-    dueDate: '2024-08-25',
-    amount: 45000,
-    currency: 'KES',
-    status: 'pending',
-    deliverables: [
-      '5 Instagram posts',
-      '4 TikTok videos',
-      '15 Instagram stories',
-      '5 YouTube shorts',
-      'Final performance report',
-    ],
-  },
-];
-
-const mockDelivery: DeliveryData = {
-  milestoneId: '2',
-  milestoneTitle: 'Mid-Campaign Content',
-  submittedBy: 'You',
-  submittedAt: '2024-07-10T10:00:00Z',
-  items: [
-    {
-      id: '1',
-      title: 'Summer Fashion Post 1',
-      type: 'image',
-      url: '/placeholder.jpg',
-      thumbnail: '/placeholder.jpg',
-      description: 'Instagram post showcasing summer collection',
-      metadata: {
-        fileSize: 2500000,
-        dimensions: { width: 1080, height: 1080 },
-      },
-    },
-    {
-      id: '2',
-      title: 'Fashion TikTok Video',
-      type: 'video',
-      url: '/placeholder.mp4',
-      thumbnail: '/placeholder.jpg',
-      description: 'TikTok video with fashion trends',
-      metadata: {
-        fileSize: 15000000,
-        duration: 60,
-      },
-    },
-  ],
-  notes: 'All content follows brand guidelines and includes required hashtags.',
+const STATUS_MAP: Record<MilestoneStatus, TrackerMilestone['status']> = {
+  PENDING: 'pending',
+  SUBMITTED: 'submitted',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  REVISION_REQUESTED: 'in_progress',
 };
+
+const ITEM_TYPE_MAP: Record<MilestoneDeliveryItemType, 'image' | 'video' | 'document' | 'link'> = {
+  IMAGE: 'image',
+  VIDEO: 'video',
+  AUDIO: 'document',
+  LINK: 'link',
+};
+
+function toTrackerMilestone(m: Milestone): TrackerMilestone {
+  return {
+    id: m.id,
+    title: m.title,
+    description: m.description || '',
+    dueDate: m.dueDate || '',
+    amount: m.amount,
+    currency: m.currency,
+    status: STATUS_MAP[m.status],
+    deliverables: m.deliverables,
+    submittedAt: m.submittedAt,
+    approvedAt: m.approvedAt,
+  };
+}
 
 export default function MilestonesPage() {
   const router = useRouter();
   const params = useParams();
+  const campaignId = params.id as string;
   const [view, setView] = useState<'tracker' | 'delivery'>('tracker');
-  const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [delivery, setDelivery] = useState<DeliveryData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    campaignService
+      .listMilestones(campaignId)
+      .then(setMilestones)
+      .catch(() => setError('Failed to load milestones. Please try again.'))
+      .finally(() => setIsLoading(false));
+  }, [campaignId]);
 
   const handleBack = () => {
-    router.push(`/dashboard/creative/campaigns/${params.id}`);
+    router.push(`/dashboard/creative/campaigns`);
   };
 
-  const handleSubmitDelivery = (milestoneId: string, data: any) => {
-    console.log('Submitting delivery for milestone:', milestoneId, data);
-    // In production, handle file upload and submission
-  };
-
-  const handleViewDetails = (milestoneId: string) => {
-    const milestone = mockMilestones.find(m => m.id === milestoneId);
-    if (milestone) {
-      setSelectedMilestone(milestone);
-      if (milestone.status === 'submitted') {
-        setView('delivery');
-      }
+  const handleSubmitDelivery = async (milestoneId: string, data: any) => {
+    setError(null);
+    try {
+      const updated = await campaignService.submitMilestoneDelivery(campaignId, milestoneId, {
+        items: data.items ?? [],
+        notes: data.notes,
+      });
+      setMilestones(prev => prev.map(m => (m.id === milestoneId ? { ...m, status: 'SUBMITTED', submittedAt: updated.submittedAt } : m)));
+    } catch {
+      setError('Failed to submit delivery. Please try again.');
     }
   };
 
-  const handleApproveDelivery = (milestoneId: string, feedback?: string) => {
-    console.log('Approving delivery:', milestoneId, feedback);
-    setView('tracker');
+  const handleViewDetails = async (milestoneId: string) => {
+    const milestone = milestones.find(m => m.id === milestoneId);
+    if (!milestone) return;
+    if (milestone.status !== 'SUBMITTED' && milestone.status !== 'APPROVED' && milestone.status !== 'REJECTED') return;
+
+    try {
+      const result = await campaignService.getMilestoneDelivery(campaignId, milestoneId);
+      setDelivery({
+        milestoneId: result.milestoneId,
+        milestoneTitle: result.milestoneTitle,
+        submittedBy: result.submittedBy,
+        submittedAt: result.submittedAt,
+        items: result.items.map((item, i) => ({
+          id: String(i),
+          title: item.title,
+          type: ITEM_TYPE_MAP[item.type],
+          url: item.url,
+          thumbnail: item.thumbnail,
+          description: item.description,
+        })),
+        notes: result.notes,
+      });
+      setView('delivery');
+    } catch {
+      setError('No delivery found for this milestone yet.');
+    }
   };
 
-  const handleRejectDelivery = (milestoneId: string, reason: string) => {
-    console.log('Rejecting delivery:', milestoneId, reason);
-    setView('tracker');
+  const handleApproveDelivery = async (milestoneId: string) => {
+    setError(null);
+    try {
+      await campaignService.approveMilestoneDelivery(campaignId, milestoneId);
+      setMilestones(prev => prev.map(m => (m.id === milestoneId ? { ...m, status: 'APPROVED' } : m)));
+      setView('tracker');
+    } catch {
+      setError('Failed to approve delivery. Please try again.');
+    }
   };
 
-  const handleRequestRevision = (milestoneId: string, feedback: string) => {
-    console.log('Requesting revision:', milestoneId, feedback);
-    setView('tracker');
+  const handleRejectDelivery = async (milestoneId: string, reason: string) => {
+    setError(null);
+    try {
+      await campaignService.rejectMilestoneDelivery(campaignId, milestoneId, reason);
+      setMilestones(prev => prev.map(m => (m.id === milestoneId ? { ...m, status: 'REJECTED' } : m)));
+      setView('tracker');
+    } catch {
+      setError('Failed to reject delivery. Please try again.');
+    }
+  };
+
+  const handleRequestRevision = async (milestoneId: string, feedback: string) => {
+    setError(null);
+    try {
+      await campaignService.requestMilestoneRevision(campaignId, milestoneId, feedback);
+      setMilestones(prev => prev.map(m => (m.id === milestoneId ? { ...m, status: 'REVISION_REQUESTED' } : m)));
+      setView('tracker');
+    } catch {
+      setError('Failed to request revision. Please try again.');
+    }
   };
 
   return (
@@ -142,19 +145,30 @@ export default function MilestonesPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">Milestone Tracking</h1>
-            <p className="text-muted-foreground">Campaign ID: {params.id}</p>
+            <p className="text-muted-foreground">Campaign ID: {campaignId}</p>
           </div>
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Content */}
-      {view === 'tracker' ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          Loading milestones...
+        </div>
+      ) : view === 'tracker' ? (
         <MilestoneTracker
-          milestones={mockMilestones}
+          milestones={milestones.map(toTrackerMilestone)}
           onSubmitDelivery={handleSubmitDelivery}
           onViewDetails={handleViewDetails}
         />
-      ) : (
+      ) : delivery ? (
         <div>
           <Button
             variant="ghost"
@@ -165,13 +179,13 @@ export default function MilestonesPage() {
             Back to Milestones
           </Button>
           <DeliveryApproval
-            delivery={mockDelivery}
+            delivery={delivery}
             onApprove={handleApproveDelivery}
             onReject={handleRejectDelivery}
             onRequestRevision={handleRequestRevision}
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

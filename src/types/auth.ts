@@ -72,7 +72,8 @@ export interface AuthState {
 }
 
 export interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<LoginResult>;
+  completeTwoFactorLogin: (sessionToken: string, code: string) => Promise<void>;
   signup: (email: string, password: string, name: string, role: 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT', countryId?: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -98,6 +99,13 @@ export interface AuthResponse {
   creatorProfile?: CreatorProfile;
   brandProfile?: BrandProfile;
 }
+
+export interface TwoFactorChallenge {
+  requiresTwoFactor: true;
+  sessionToken: string;
+}
+
+export type LoginResult = AuthResponse | TwoFactorChallenge;
 
 export interface ApiError {
   message: string;

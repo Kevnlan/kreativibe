@@ -30,8 +30,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, completeTwoFactorLogin } = useAuth();
 
   const {
     register,
@@ -45,10 +47,29 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
     try {
-      await login(data.email, data.password);
+      const result = await login(data.email, data.password);
+      if ('requiresTwoFactor' in result) {
+        setSessionToken(result.sessionToken);
+        return;
+      }
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to login. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onSubmitTwoFactor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sessionToken) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      await completeTwoFactorLogin(sessionToken, twoFactorCode);
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Invalid or expired code. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -119,69 +140,107 @@ export default function LoginPage() {
           </div>
 
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-foreground mb-1">Welcome back</h1>
-            <p className="text-muted-foreground">Sign in to your account to continue</p>
+            <h1 className="text-2xl font-bold text-foreground mb-1">
+              {sessionToken ? 'Two-factor verification' : 'Welcome back'}
+            </h1>
+            <p className="text-muted-foreground">
+              {sessionToken
+                ? 'Enter the 6-digit code from your authenticator app, or a backup code'
+                : 'Sign in to your account to continue'}
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {error && (
-              <div className="bg-red-50 border border-red-300 text-red-600 text-sm p-3 rounded-lg">
-                {error}
-              </div>
-            )}
+          {sessionToken ? (
+            <form onSubmit={onSubmitTwoFactor} className="space-y-5">
+              {error && (
+                <div className="bg-red-50 border border-red-300 text-red-600 text-sm p-3 rounded-lg">
+                  {error}
+                </div>
+              )}
 
-            <Input
-              label="Email address"
-              type="email"
-              placeholder="you@example.com"
-              leftIcon={<Mail className="h-4 w-4" />}
-              error={errors.email?.message}
-              {...register('email')}
-              disabled={isLoading}
-            />
+              <Input
+                label="Authentication code"
+                type="text"
+                placeholder="123456"
+                value={twoFactorCode}
+                onChange={(e) => setTwoFactorCode(e.target.value)}
+                disabled={isLoading}
+                autoFocus
+              />
 
-            <Input
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Your password"
-              leftIcon={<Lock className="h-4 w-4" />}
-              rightIcon={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              }
-              error={errors.password?.message}
-              {...register('password')}
-              disabled={isLoading}
-            />
+              <Button type="submit" className="w-full" loading={isLoading} variant="brand" size="lg">
+                Verify and sign in
+              </Button>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <input
-                  id="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
-                />
-                <label htmlFor="remember-me" className="text-sm text-muted-foreground">
-                  Remember me
-                </label>
-              </div>
-              <Link
-                href="/auth/forgot-password"
-                className="text-sm text-brand-blue hover:text-brand-blue-dark transition-colors font-medium"
+              <button
+                type="button"
+                onClick={() => { setSessionToken(null); setTwoFactorCode(''); setError(null); }}
+                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                Forgot password?
-              </Link>
-            </div>
+                Back to login
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              {error && (
+                <div className="bg-red-50 border border-red-300 text-red-600 text-sm p-3 rounded-lg">
+                  {error}
+                </div>
+              )}
 
-            <Button type="submit" className="w-full" loading={isLoading} variant="brand" size="lg">
-              Sign in
-            </Button>
-          </form>
+              <Input
+                label="Email address"
+                type="email"
+                placeholder="you@example.com"
+                leftIcon={<Mail className="h-4 w-4" />}
+                error={errors.email?.message}
+                {...register('email')}
+                disabled={isLoading}
+              />
+
+              <Input
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Your password"
+                leftIcon={<Lock className="h-4 w-4" />}
+                rightIcon={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                }
+                error={errors.password?.message}
+                {...register('password')}
+                disabled={isLoading}
+              />
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <input
+                    id="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-gray-300 text-brand-blue focus:ring-brand-blue"
+                  />
+                  <label htmlFor="remember-me" className="text-sm text-muted-foreground">
+                    Remember me
+                  </label>
+                </div>
+                <Link
+                  href="/auth/forgot-password"
+                  className="text-sm text-brand-blue hover:text-brand-blue-dark transition-colors font-medium"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+
+              <Button type="submit" className="w-full" loading={isLoading} variant="brand" size="lg">
+                Sign in
+              </Button>
+            </form>
+          )}
 
           <div className="mt-8">
             <p className="text-sm text-muted-foreground text-center">

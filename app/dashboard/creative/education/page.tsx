@@ -1,133 +1,79 @@
 'use client';
 
-import { useState } from 'react';
-import { BookOpen, PlayCircle, Award, CheckCircle, Lock, Star, Clock, ChevronRight, Trophy, Target, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BookOpen, PlayCircle, Award, CheckCircle, Lock, Star, Clock, ChevronRight, Trophy, Target, Loader2 } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, StatusBadge } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { educationService } from '@/services/education.service';
+import { Course, ContentStandard, ContentExample, CourseLevel } from '@/types/education.types';
 
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  duration: string;
-  lessons: number;
-  completed: number;
-  isLocked: boolean;
-  level: 'Beginner' | 'Intermediate' | 'Advanced';
-  category: string;
-  certification?: string;
-}
-
-interface ContentExample {
-  id: string;
-  title: string;
-  creator: string;
-  platform: string;
-  views: string;
-  engagement: string;
-  niche: string;
-  color: string;
-}
-
-const courses: Course[] = [
-  {
-    id: '1',
-    title: 'Content Creation Fundamentals',
-    description: 'Learn the basics of creating high-converting marketing content for brands. Covers storytelling, framing, and audience targeting.',
-    duration: '2h 30m',
-    lessons: 12,
-    completed: 12,
-    isLocked: false,
-    level: 'Beginner',
-    category: 'Foundation',
-    certification: 'Kreativibe Content Creator',
-  },
-  {
-    id: '2',
-    title: 'Brand Collaboration Best Practices',
-    description: 'Master the art of working with brands — from reading briefs, meeting expectations, to delivering content that drives results.',
-    duration: '1h 45m',
-    lessons: 8,
-    completed: 6,
-    isLocked: false,
-    level: 'Beginner',
-    category: 'Collaboration',
-  },
-  {
-    id: '3',
-    title: 'Video Production for Social Media',
-    description: 'Professional-grade video content for TikTok, Instagram Reels, YouTube Shorts, and Facebook — using just your phone.',
-    duration: '3h 15m',
-    lessons: 16,
-    completed: 3,
-    isLocked: false,
-    level: 'Intermediate',
-    category: 'Video',
-  },
-  {
-    id: '4',
-    title: 'Photography for Brands',
-    description: 'Product photography, lifestyle shoots, and Instagram-ready images. Natural lighting, composition, and editing basics.',
-    duration: '2h',
-    lessons: 10,
-    completed: 0,
-    isLocked: false,
-    level: 'Intermediate',
-    category: 'Photography',
-  },
-  {
-    id: '5',
-    title: 'Audio Content for Radio & Podcasts',
-    description: 'Create compelling audio content, voice-overs, and radio ad scripts that move audiences to act.',
-    duration: '1h 30m',
-    lessons: 7,
-    completed: 0,
-    isLocked: true,
-    level: 'Intermediate',
-    category: 'Audio',
-  },
-  {
-    id: '6',
-    title: 'Analytics & Content Performance',
-    description: 'Understand engagement metrics, reach, and conversion data. Learn to optimize content based on performance.',
-    duration: '2h',
-    lessons: 9,
-    completed: 0,
-    isLocked: true,
-    level: 'Advanced',
-    category: 'Analytics',
-    certification: 'Kreativibe Analytics Pro',
-  },
-];
-
-const standards = [
-  { title: 'Resolution & Quality', description: 'Minimum 1080p for video, 1200px+ for images. No watermarks, pixelation, or compression artifacts.', passed: true },
-  { title: 'Brand Safety', description: 'No prohibited content: violence, explicit material, or competing brand mentions without approval.', passed: true },
-  { title: 'Authentic Disclosure', description: 'All sponsored content must include #ad or #sponsored disclosure as per ASA guidelines.', passed: false },
-  { title: 'Audio Quality', description: 'Clean audio for video content — no background noise, echo, or distortion above acceptable thresholds.', passed: true },
-  { title: 'Metadata Accuracy', description: 'Accurate title, description, platform tags, and pricing for all uploaded content.', passed: false },
-];
-
-const contentExamples: ContentExample[] = [
-  { id: '1', title: 'Fashion Unboxing Reel', creator: 'Sarah K.', platform: 'Instagram', views: '2.4M', engagement: '8.3%', niche: 'Fashion', color: 'from-pink-400 to-rose-500' },
-  { id: '2', title: 'Tech Review Video', creator: 'Michael K.', platform: 'YouTube', views: '890K', engagement: '6.1%', niche: 'Tech', color: 'from-blue-400 to-indigo-500' },
-  { id: '3', title: 'Recipe TikTok', creator: 'Grace W.', platform: 'TikTok', views: '5.1M', engagement: '12.4%', niche: 'Food', color: 'from-orange-400 to-amber-500' },
-  { id: '4', title: 'Skincare Routine', creator: 'Aisha N.', platform: 'TikTok', views: '3.2M', engagement: '9.7%', niche: 'Beauty', color: 'from-violet-400 to-purple-500' },
-];
-
-const levelColors = {
-  Beginner: 'bg-green-100 text-green-700',
-  Intermediate: 'bg-blue-100 text-blue-700',
-  Advanced: 'bg-purple-100 text-purple-700',
+const levelColors: Record<CourseLevel, string> = {
+  BEGINNER: 'bg-green-100 text-green-700',
+  INTERMEDIATE: 'bg-blue-100 text-blue-700',
+  ADVANCED: 'bg-purple-100 text-purple-700',
 };
+
+const EXAMPLE_GRADIENTS = [
+  'from-pink-400 to-rose-500',
+  'from-blue-400 to-indigo-500',
+  'from-orange-400 to-amber-500',
+  'from-violet-400 to-purple-500',
+];
 
 export default function CreatorEducationPage() {
   const [activeTab, setActiveTab] = useState<'courses' | 'standards' | 'examples'>('courses');
-  const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [standards, setStandards] = useState<ContentStandard[]>([]);
+  const [examples, setExamples] = useState<ContentExample[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [busyCourseId, setBusyCourseId] = useState<string | null>(null);
 
-  const completedCourses = courses.filter(c => c.completed === c.lessons).length;
-  const totalLessons = courses.reduce((s, c) => s + c.completed, 0);
-  const certifications = courses.filter(c => c.certification && c.completed === c.lessons).length;
+  useEffect(() => {
+    Promise.all([
+      educationService.listCourses(),
+      educationService.listStandards(),
+      educationService.listExamples(),
+    ])
+      .then(([coursesRes, standardsRes, examplesRes]) => {
+        setCourses(coursesRes.items);
+        setStandards(standardsRes.items);
+        setExamples(examplesRes.items);
+      })
+      .catch(() => setError('Failed to load the learning center. Please try again.'))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const completedCourses = courses.filter(c => c.lessons.every(l => l.completed)).length;
+  const totalLessonsCompleted = courses.reduce((s, c) => s + c.lessons.filter(l => l.completed).length, 0);
+  const certifications = courses.filter(c => c.certification && c.lessons.every(l => l.completed)).length;
+
+  const handleAdvanceCourse = async (course: Course) => {
+    const nextLesson = course.lessons.find(l => !l.completed);
+    if (!nextLesson) return;
+    setBusyCourseId(course.id);
+    try {
+      await educationService.completeLesson(course.id, nextLesson.id);
+      setCourses(prev => prev.map(c =>
+        c.id === course.id
+          ? { ...c, lessons: c.lessons.map(l => (l.id === nextLesson.id ? { ...l, completed: true } : l)) }
+          : c
+      ));
+    } catch {
+      setError('Failed to update lesson progress. Please try again.');
+    } finally {
+      setBusyCourseId(null);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+        Loading learning center...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -149,6 +95,12 @@ export default function CreatorEducationPage() {
         )}
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Progress Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -168,10 +120,10 @@ export default function CreatorEducationPage() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-green-100 rounded-xl">
-                <Zap className="h-5 w-5 text-green-600" />
+                <Award className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{totalLessons}</p>
+                <p className="text-2xl font-bold">{totalLessonsCompleted}</p>
                 <p className="text-sm text-muted-foreground">Lessons Completed</p>
               </div>
             </div>
@@ -181,7 +133,7 @@ export default function CreatorEducationPage() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-yellow-100 rounded-xl">
-                <Award className="h-5 w-5 text-yellow-600" />
+                <Trophy className="h-5 w-5 text-yellow-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{certifications}</p>
@@ -216,8 +168,9 @@ export default function CreatorEducationPage() {
       {activeTab === 'courses' && (
         <div className="space-y-4">
           {courses.map(course => {
-            const progress = Math.round((course.completed / course.lessons) * 100);
-            const isComplete = course.completed === course.lessons;
+            const completedCount = course.lessons.filter(l => l.completed).length;
+            const progress = course.lessons.length ? Math.round((completedCount / course.lessons.length) * 100) : 0;
+            const isComplete = course.lessons.length > 0 && completedCount === course.lessons.length;
             return (
               <Card key={course.id} className={cn(course.isLocked && 'opacity-60')}>
                 <CardContent className="pt-5">
@@ -239,7 +192,7 @@ export default function CreatorEducationPage() {
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <h3 className="font-semibold text-foreground">{course.title}</h3>
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${levelColors[course.level]}`}>
-                            {course.level}
+                            {course.level.toLowerCase()}
                           </span>
                           {course.certification && (
                             <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-medium flex items-center gap-1">
@@ -250,13 +203,13 @@ export default function CreatorEducationPage() {
                         <p className="text-sm text-muted-foreground mb-3">{course.description}</p>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
                           <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {course.duration}</span>
-                          <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {course.lessons} lessons</span>
+                          <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {course.lessons.length} lessons</span>
                           <span className="flex items-center gap-1"><Target className="h-3 w-3" /> {course.category}</span>
                         </div>
                         {!course.isLocked && (
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">{course.completed}/{course.lessons} lessons</span>
+                              <span className="text-muted-foreground">{completedCount}/{course.lessons.length} lessons</span>
                               <span className="font-medium">{progress}%</span>
                             </div>
                             <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -279,8 +232,8 @@ export default function CreatorEducationPage() {
                           <CheckCircle className="h-4 w-4 mr-1" />Review
                         </Button>
                       ) : (
-                        <Button size="sm">
-                          {course.completed > 0 ? 'Continue' : 'Start'}
+                        <Button size="sm" disabled={busyCourseId === course.id} onClick={() => handleAdvanceCourse(course)}>
+                          {completedCount > 0 ? 'Continue' : 'Start'}
                           <ChevronRight className="h-4 w-4 ml-1" />
                         </Button>
                       )}
@@ -334,8 +287,8 @@ export default function CreatorEducationPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {contentExamples.map(ex => (
-              <div key={ex.id} className={`bg-gradient-to-br ${ex.color} rounded-2xl p-5 text-white`}>
+            {examples.map((ex, i) => (
+              <div key={ex.id} className={`bg-gradient-to-br ${EXAMPLE_GRADIENTS[i % EXAMPLE_GRADIENTS.length]} rounded-2xl p-5 text-white`}>
                 <div className="mb-3">
                   <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{ex.platform}</span>
                 </div>
@@ -344,11 +297,11 @@ export default function CreatorEducationPage() {
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-white/70">Views</span>
-                    <span className="font-semibold">{ex.views}</span>
+                    <span className="font-semibold">{ex.views.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-white/70">Engagement</span>
-                    <span className="font-semibold">{ex.engagement}</span>
+                    <span className="font-semibold">{ex.engagement}%</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-white/70">Niche</span>

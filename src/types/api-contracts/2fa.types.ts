@@ -26,7 +26,7 @@ export interface TwoFactorStatus {
 
 export interface TwoFactorDisableRequest {
   password: string;
-  code?: string;
+  code: string;
 }
 
 export interface RegenerateBackupCodesResponse {

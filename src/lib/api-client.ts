@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { AuthResponse, ApiError } from '../types/auth';
+import { AuthResponse, ApiError, LoginResult } from '../types/auth';
 import { normalizeCreatorProfile } from './normalize';
 
 class ApiClient {
@@ -136,12 +136,36 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async login(email: string, password: string): Promise<AuthResponse> {
+  async login(email: string, password: string): Promise<LoginResult> {
     try {
       const response = await this.client.post('/auth/login', {
         email,
         password,
       });
+
+      const data = response.data.data;
+      if (data.requiresTwoFactor) {
+        return { requiresTwoFactor: true, sessionToken: data.sessionToken };
+      }
+
+      const { user, accessToken, refreshToken, creatorProfile, brandProfile } = data;
+      this.setTokens(accessToken, refreshToken);
+
+      return {
+        user,
+        accessToken,
+        refreshToken,
+        creatorProfile: normalizeCreatorProfile(creatorProfile) || undefined,
+        brandProfile,
+      };
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async loginWithTwoFactor(sessionToken: string, code: string): Promise<AuthResponse> {
+    try {
+      const response = await this.client.post('/auth/login/2fa', { sessionToken, code });
 
       const { user, accessToken, refreshToken, creatorProfile, brandProfile } = response.data.data;
       this.setTokens(accessToken, refreshToken);

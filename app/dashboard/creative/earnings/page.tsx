@@ -3,61 +3,25 @@
 import { useState, useEffect } from 'react';
 import { DollarSign, TrendingUp, FileText, Calendar, Download } from 'lucide-react';
 import { Button, StatCard, Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
-import { mockStore } from '@/lib/mock-data/mock-store';
 import { useUser } from '@/contexts/AuthContext';
-
-interface EarningsSummary {
-  thisMonth: number;
-  lastMonth: number;
-  thisYear: number;
-  totalSales: number;
-  averagePerSale: number;
-  currency: string;
-}
+import { earningsService } from '@/services/earnings.service';
+import { EarningsSummary } from '@/types/earnings.types';
+import { formatCurrency } from '@/lib/utils';
 
 export default function EarningsPage() {
   const [earnings, setEarnings] = useState<EarningsSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const user = useUser();
 
   useEffect(() => {
-    if (user) {
-      loadEarnings();
-    }
+    if (!user) return;
+    earningsService
+      .getSummary()
+      .then(setEarnings)
+      .catch(() => setError('Failed to load earnings. Please try again.'))
+      .finally(() => setLoading(false));
   }, [user]);
-
-  const loadEarnings = async () => {
-    setLoading(true);
-    try {
-      // Mock data - replace with actual API call
-      const wallet = mockStore.getWallet(user!.id);
-      const transactions = mockStore.getTransactions(user!.id);
-      
-      const creditTransactions = transactions.filter(t => t.type === 'CREDIT' && t.status === 'COMPLETED');
-      const totalSales = creditTransactions.length;
-      const totalEarnings = creditTransactions.reduce((sum, t) => sum + t.amount, 0);
-      
-      setEarnings({
-        thisMonth: totalEarnings * 0.3,
-        lastMonth: totalEarnings * 0.25,
-        thisYear: totalEarnings,
-        totalSales,
-        averagePerSale: totalSales > 0 ? totalEarnings / totalSales : 0,
-        currency: wallet.currency,
-      });
-    } catch (error) {
-      console.error('Failed to load earnings:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatCurrency = (amount: number, currency: string = 'KES') => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: currency,
-    }).format(amount);
-  };
 
   const calculateGrowth = (current: number, previous: number) => {
     if (previous === 0) return 0;
@@ -86,6 +50,12 @@ export default function EarningsPage() {
           Export Report
         </Button>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -135,23 +105,23 @@ export default function EarningsPage() {
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div>
                       <p className="text-sm font-medium">Content Sales</p>
-                      <p className="text-xs text-muted-foreground">{earnings.totalSales} sales</p>
+                      <p className="text-xs text-muted-foreground">{earnings.breakdown.contentSales.percent}% of earnings</p>
                     </div>
-                    <p className="font-semibold">{formatCurrency(earnings.thisYear * 0.8, earnings.currency)}</p>
+                    <p className="font-semibold">{formatCurrency(earnings.breakdown.contentSales.amount, earnings.currency)}</p>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div>
                       <p className="text-sm font-medium">Custom Requests</p>
-                      <p className="text-xs text-muted-foreground">3 projects</p>
+                      <p className="text-xs text-muted-foreground">{earnings.breakdown.customRequests.percent}% of earnings</p>
                     </div>
-                    <p className="font-semibold">{formatCurrency(earnings.thisYear * 0.15, earnings.currency)}</p>
+                    <p className="font-semibold">{formatCurrency(earnings.breakdown.customRequests.amount, earnings.currency)}</p>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div>
                       <p className="text-sm font-medium">Bonuses</p>
-                      <p className="text-xs text-muted-foreground">Performance rewards</p>
+                      <p className="text-xs text-muted-foreground">{earnings.breakdown.bonuses.percent}% of earnings</p>
                     </div>
-                    <p className="font-semibold">{formatCurrency(earnings.thisYear * 0.05, earnings.currency)}</p>
+                    <p className="font-semibold">{formatCurrency(earnings.breakdown.bonuses.amount, earnings.currency)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -162,32 +132,24 @@ export default function EarningsPage() {
                 <CardTitle>Top Performing Content</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-16 h-16 bg-muted rounded-lg"></div>
-                    <div className="flex-1">
-                      <p className="font-medium">Summer Fashion Collection</p>
-                      <p className="text-sm text-muted-foreground">12 sales</p>
-                    </div>
-                    <p className="font-semibold">{formatCurrency(15000, earnings.currency)}</p>
+                {earnings.topPerformingContent.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4">
+                    No content sales yet — this fills in once your content starts selling.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {earnings.topPerformingContent.map(item => (
+                      <div key={item.contentId} className="flex items-center gap-3">
+                        <div className="w-16 h-16 bg-muted rounded-lg"></div>
+                        <div className="flex-1">
+                          <p className="font-medium">{item.title}</p>
+                          <p className="text-sm text-muted-foreground">{item.salesCount} sales</p>
+                        </div>
+                        <p className="font-semibold">{formatCurrency(item.revenue, earnings.currency)}</p>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-16 h-16 bg-muted rounded-lg"></div>
-                    <div className="flex-1">
-                      <p className="font-medium">Product Photography Set</p>
-                      <p className="text-sm text-muted-foreground">8 sales</p>
-                    </div>
-                    <p className="font-semibold">{formatCurrency(10000, earnings.currency)}</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-16 h-16 bg-muted rounded-lg"></div>
-                    <div className="flex-1">
-                      <p className="font-medium">Social Media Templates</p>
-                      <p className="text-sm text-muted-foreground">15 sales</p>
-                    </div>
-                    <p className="font-semibold">{formatCurrency(7500, earnings.currency)}</p>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>

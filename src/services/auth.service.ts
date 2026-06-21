@@ -1,9 +1,13 @@
 import { apiClient } from '../lib/api-client';
-import { AuthResponse } from '../types/auth';
+import { AuthResponse, LoginResult } from '../types/auth';
 
 export const authService = {
-  async login(email: string, password: string): Promise<AuthResponse> {
+  async login(email: string, password: string): Promise<LoginResult> {
     return apiClient.login(email, password);
+  },
+
+  async loginWithTwoFactor(sessionToken: string, code: string): Promise<AuthResponse> {
+    return apiClient.loginWithTwoFactor(sessionToken, code);
   },
 
   async register(

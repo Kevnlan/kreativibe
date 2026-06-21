@@ -1,96 +1,114 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ContractGenerator, ContractData } from '@/components/campaign/ContractGenerator';
 import { ContractViewer } from '@/components/campaign/ContractViewer';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
+import { useUser } from '@/contexts/AuthContext';
+import { contractService } from '@/services/contract.service';
+import { campaignService } from '@/services/campaign.service';
+import { Contract } from '@/types/contract.types';
 
-// Mock data for development
-const mockProposalData = {
-  campaignId: '1',
-  proposedRate: 150000,
-};
-
-const mockContract: ContractData = {
-  campaignId: '1',
-  brandName: 'Fashion Brand Kenya',
-  creativeName: 'Sarah Mwangi',
-  startDate: '2024-06-01',
-  endDate: '2024-08-31',
-  totalAmount: 150000,
-  currency: 'KES',
-  clauses: [
-    {
-      id: '1',
-      title: 'Scope of Work',
-      content: 'The Creative agrees to create and deliver social media content as outlined in the campaign brief. This includes but is not limited to Instagram posts, TikTok videos, and YouTube shorts.',
-      required: true,
-      editable: true,
-    },
-    {
-      id: '2',
-      title: 'Deliverables',
-      content: '15 Instagram posts, 20 TikTok videos, 10 YouTube shorts, 30 Instagram stories, and monthly performance reports.',
-      required: true,
-      editable: true,
-    },
-    {
-      id: '3',
-      title: 'Payment Terms',
-      content: 'Total payment of KES 150,000 will be made in three installments: 30% upon signing, 40% upon milestone 2 completion, and 30% upon final delivery.',
-      required: true,
-      editable: true,
-    },
-    {
-      id: '4',
-      title: 'Timeline',
-      content: 'Campaign duration: June 1, 2024 to August 31, 2024. Content creation: Weeks 2-8. Campaign launch: Week 5. Performance review: Week 12.',
-      required: true,
-      editable: true,
-    },
-    {
-      id: '5',
-      title: 'Intellectual Property Rights',
-      content: 'All content created under this contract becomes the property of the Brand upon full payment. The Creative retains the right to use the content in their portfolio with proper attribution.',
-      required: true,
-      editable: true,
-    },
-    {
-      id: '6',
-      title: 'Confidentiality',
-      content: 'Both parties agree to keep confidential any proprietary information shared during the course of this contract.',
-      required: true,
-      editable: true,
-    },
-  ],
-  additionalTerms: 'This contract is governed by the laws of Kenya. Any disputes shall be resolved through arbitration in Nairobi.',
-};
+function toContractData(contract: Contract): ContractData {
+  return {
+    campaignId: contract.campaignId,
+    brandName: contract.brandName,
+    creativeName: contract.creativeName,
+    startDate: contract.startDate || '',
+    endDate: contract.endDate || '',
+    totalAmount: contract.totalAmount,
+    currency: contract.currency,
+    clauses: contract.clauses,
+    additionalTerms: contract.additionalTerms,
+  };
+}
 
 export default function ContractPage() {
   const router = useRouter();
   const params = useParams();
+  const user = useUser();
+  const campaignId = params.id as string;
+
   const [step, setStep] = useState<'generate' | 'review' | 'signed'>('generate');
-  const [contract, setContract] = useState<ContractData | null>(null);
+  const [contract, setContract] = useState<Contract | null>(null);
+  const [acceptedApplication, setAcceptedApplication] = useState<{ applicationId: string; proposedRate: number; currency: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    contractService
+      .getContract(campaignId)
+      .then(existing => {
+        setContract(existing);
+        setStep(existing.status === 'ACTIVE' ? 'signed' : 'review');
+      })
+      .catch(() => {
+        // No contract generated yet — fetch the accepted application to seed generation.
+        campaignService
+          .listApplications(campaignId)
+          .then(applications => {
+            const accepted = applications.find(a => a.status === 'ACCEPTED');
+            if (accepted) {
+              setAcceptedApplication({
+                applicationId: accepted.id,
+                proposedRate: accepted.proposedRate ?? 0,
+                currency: accepted.currency ?? 'KES',
+              });
+            }
+          })
+          .catch(() => setError('Failed to load campaign applications.'));
+      })
+      .finally(() => setIsLoading(false));
+  }, [campaignId]);
 
   const handleBack = () => {
-    router.push(`/dashboard/brand/campaigns/${params.id}`);
+    router.push(`/dashboard/brand/campaigns/${campaignId}`);
   };
 
-  const handleGenerateContract = (generatedContract: ContractData) => {
-    setContract(mockContract);
-    setStep('review');
+  const handleGenerateContract = async (generatedContract: ContractData) => {
+    if (!acceptedApplication) {
+      setError('No accepted application found for this campaign — accept a creator application first.');
+      return;
+    }
+    setError(null);
+    try {
+      const created = await contractService.generateContract(campaignId, {
+        applicationId: acceptedApplication.applicationId,
+        proposedRate: acceptedApplication.proposedRate,
+        currency: acceptedApplication.currency,
+      });
+      if (generatedContract.additionalTerms) {
+        const updated = await contractService.updateContractClauses(campaignId, { additionalTerms: generatedContract.additionalTerms });
+        setContract(updated);
+      } else {
+        setContract(created);
+      }
+      setStep('review');
+    } catch {
+      setError('Failed to generate contract. Please try again.');
+    }
   };
 
-  const handleSignContract = () => {
-    setStep('signed');
-    // In production, call API to sign contract
-    console.log('Signing contract:', contract);
+  const handleSignContract = async () => {
+    setError(null);
+    try {
+      const signed = await contractService.signContract(campaignId, { signature: user?.name || 'Brand' });
+      setContract(signed);
+      setStep(signed.status === 'ACTIVE' ? 'signed' : 'review');
+    } catch {
+      setError('Failed to sign contract. Please try again.');
+    }
   };
 
-  const handleDownload = () => {
-    console.log('Downloading contract PDF');
+  const handleDownload = async () => {
+    try {
+      const { url } = await contractService.downloadContract(campaignId);
+      window.open(url, '_blank');
+    } catch {
+      setError('Failed to generate the contract download.');
+    }
   };
 
   const handleShare = () => {
@@ -100,6 +118,15 @@ export default function ContractPage() {
   const handlePrint = () => {
     window.print();
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+        Loading contract...
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -111,22 +138,28 @@ export default function ContractPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold">Contract Management</h1>
-            <p className="text-muted-foreground">Campaign ID: {params.id}</p>
+            <p className="text-muted-foreground">Campaign ID: {campaignId}</p>
           </div>
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Content */}
       {step === 'generate' && (
         <ContractGenerator
-          proposalData={mockProposalData}
+          proposalData={{ campaignId, proposedRate: acceptedApplication?.proposedRate ?? 0 }}
           onGenerate={handleGenerateContract}
         />
       )}
 
       {step === 'review' && contract && (
         <ContractViewer
-          contract={contract}
+          contract={toContractData(contract)}
           onSign={handleSignContract}
           onDownload={handleDownload}
           onShare={handleShare}
@@ -144,7 +177,7 @@ export default function ContractPage() {
           </div>
 
           <ContractViewer
-            contract={contract}
+            contract={toContractData(contract)}
             onDownload={handleDownload}
             onShare={handleShare}
             onPrint={handlePrint}

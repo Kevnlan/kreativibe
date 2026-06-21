@@ -6,7 +6,10 @@ import {
   CampaignListResponse,
   CampaignApplication,
   RawCampaignApplication,
+  Proposal,
+  RawProposal,
 } from '../types/campaign.types';
+import { Contract, RawContract } from '../types/contract.types';
 
 export interface RawCreatorProfile {
   id: string;
@@ -97,4 +100,33 @@ export function normalizeApplication(raw: RawCampaignApplication): CampaignAppli
 
 export function normalizeApplicationList(raw: RawCampaignApplication[]): CampaignApplication[] {
   return raw.map(normalizeApplication);
+}
+
+// totalAmount is a decimal string from the backend like budgetMin/budgetMax above.
+export function normalizeContract(raw: RawContract): Contract {
+  const { startDate, endDate, totalAmount, additionalTerms, brandSignedAt, creatorSignedAt, ...rest } = raw;
+
+  return {
+    ...rest,
+    startDate: startDate ?? undefined,
+    endDate: endDate ?? undefined,
+    totalAmount: Number(totalAmount),
+    additionalTerms: additionalTerms ?? undefined,
+    brandSignedAt: brandSignedAt ?? undefined,
+    creatorSignedAt: creatorSignedAt ?? undefined,
+  };
+}
+
+// proposedRate is a decimal string from the backend like budgetMin/budgetMax above.
+export function normalizeProposal(raw: RawProposal): Proposal {
+  const { proposedRate, currency, timeline, coverLetter, submittedAt, ...rest } = raw;
+
+  return {
+    ...rest,
+    proposedRate: proposedRate != null ? Number(proposedRate) : undefined,
+    currency: currency ?? undefined,
+    timeline: timeline ?? undefined,
+    coverLetter: coverLetter ?? undefined,
+    submittedAt: submittedAt ?? undefined,
+  };
 }

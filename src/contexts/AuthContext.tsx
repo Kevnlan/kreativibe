@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { apiClient } from '../lib/api-client';
-import { User, CreatorProfile, BrandProfile, AuthContextType, AuthState } from '../types/auth';
+import { User, CreatorProfile, BrandProfile, AuthContextType, AuthState, LoginResult } from '../types/auth';
 
 const initialState: AuthState = {
   user: null,
@@ -63,13 +63,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return 'CREATOR';
   };
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (email: string, password: string): Promise<LoginResult> => {
     setLoading(true);
     try {
       const response = await apiClient.login(email, password);
+      if ('requiresTwoFactor' in response) {
+        setLoading(false);
+        return response;
+      }
       setUser(response.user);
       setCreatorProfile(response.creatorProfile || null);
       setBrandProfile(response.brandProfile || null);
+      return response;
     } catch (error) {
       // API unavailable — fall back to mock login, infer role from email
       const role = inferRoleFromEmail(email);
@@ -79,6 +84,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
         localStorage.setItem('access_token', 'mock-token');
       }
       setUser(mockUser);
+      return { user: mockUser, accessToken: 'mock-token', refreshToken: 'mock-token' };
+    }
+  };
+
+  const completeTwoFactorLogin = async (sessionToken: string, code: string): Promise<void> => {
+    setLoading(true);
+    try {
+      const response = await apiClient.loginWithTwoFactor(sessionToken, code);
+      setUser(response.user);
+      setCreatorProfile(response.creatorProfile || null);
+      setBrandProfile(response.brandProfile || null);
+    } catch (error) {
+      setLoading(false);
+      throw error;
     }
   };
 
@@ -182,6 +201,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value: AuthContextType = {
     ...state,
     login,
+    completeTwoFactorLogin,
     signup,
     logout,
     refreshUser,

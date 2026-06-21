@@ -7,8 +7,9 @@ export const postService = {
     return apiClient.get('/posts', filters);
   },
 
+  // Rows are created automatically by the schedule "publish now" flow — no direct create endpoint.
   async getMyPosts(filters?: Omit<PostFilters, 'creatorId'>): Promise<PaginatedResponse<Post>> {
-    return apiClient.get('/posts/me', filters);
+    return apiClient.post('/posts/me/list', filters ?? {});
   },
 
   async getPostById(id: string): Promise<Post> {

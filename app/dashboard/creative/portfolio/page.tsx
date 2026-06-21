@@ -1,101 +1,41 @@
 'use client';
 
-import { Plus, Eye, TrendingUp, Star, CheckCircle, Instagram, Youtube } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
+import { useState, useEffect } from 'react';
+import { Plus, Star, CheckCircle, Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { formatNumber, formatCurrency } from '@/lib/utils';
+import { portfolioService } from '@/services/portfolio.service';
+import { PortfolioItem } from '@/types/portfolio.types';
 
-const demoPortfolio = [
-  {
-    id: 1,
-    title: 'GlowUp Skincare Launch',
-    brand: 'GlowUp Africa',
-    platform: 'Instagram',
-    type: 'Reel',
-    completedAt: 'Jan 2026',
-    reach: 52000,
-    engagement: 5.8,
-    earnings: 8000,
-    rating: 5,
-    color: 'from-orange-400 to-yellow-400',
-    tags: ['Beauty', 'Skincare'],
-  },
-  {
-    id: 2,
-    title: 'StyleHouse Winter Edit',
-    brand: 'StyleHouse KE',
-    platform: 'TikTok',
-    type: 'Video',
-    completedAt: 'Dec 2025',
-    reach: 88000,
-    engagement: 7.2,
-    earnings: 6500,
-    rating: 5,
-    color: 'from-pink-400 to-rose-500',
-    tags: ['Fashion', 'Lifestyle'],
-  },
-  {
-    id: 3,
-    title: 'Diani Beach Travel Vlog',
-    brand: 'VisitKenya',
-    platform: 'YouTube',
-    type: 'Video',
-    completedAt: 'Nov 2025',
-    reach: 134000,
-    engagement: 4.9,
-    earnings: 12000,
-    rating: 4,
-    color: 'from-cyan-400 to-sky-500',
-    tags: ['Travel', 'Lifestyle'],
-  },
-  {
-    id: 4,
-    title: 'FoodieKE Street Series Ep.1',
-    brand: 'FoodieKE',
-    platform: 'TikTok',
-    type: 'Video',
-    completedAt: 'Oct 2025',
-    reach: 41000,
-    engagement: 6.1,
-    earnings: 4500,
-    rating: 5,
-    color: 'from-green-400 to-teal-500',
-    tags: ['Food', 'Travel'],
-  },
-  {
-    id: 5,
-    title: '30-Day Fitness Transformation',
-    brand: 'FitLife Nairobi',
-    platform: 'Instagram',
-    type: 'Post Series',
-    completedAt: 'Sep 2025',
-    reach: 28500,
-    engagement: 8.4,
-    earnings: 9500,
-    rating: 5,
-    color: 'from-purple-400 to-violet-500',
-    tags: ['Fitness', 'Health'],
-  },
-  {
-    id: 6,
-    title: 'Budget Smartphone Review',
-    brand: 'TechKE',
-    platform: 'YouTube',
-    type: 'Review Video',
-    completedAt: 'Aug 2025',
-    reach: 61000,
-    engagement: 3.7,
-    earnings: 9500,
-    rating: 4,
-    color: 'from-blue-400 to-indigo-500',
-    tags: ['Tech', 'Gadgets'],
-  },
+const GRADIENTS = [
+  'from-orange-400 to-yellow-400',
+  'from-pink-400 to-rose-500',
+  'from-cyan-400 to-sky-500',
+  'from-green-400 to-teal-500',
+  'from-purple-400 to-violet-500',
+  'from-blue-400 to-indigo-500',
 ];
 
 export default function PortfolioPage() {
-  const totalEarnings = demoPortfolio.reduce((s, p) => s + p.earnings, 0);
-  const avgEngagement = demoPortfolio.reduce((s, p) => s + p.engagement, 0) / demoPortfolio.length;
-  const totalReach = demoPortfolio.reduce((s, p) => s + p.reach, 0);
+  const [items, setItems] = useState<PortfolioItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    portfolioService
+      .list()
+      .then(setItems)
+      .catch(() => setError('Failed to load portfolio. Please try again.'))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const withEngagement = items.filter(i => i.engagement != null);
+  const totalEarnings = items.reduce((s, i) => s + (i.earnings ?? 0), 0);
+  const avgEngagement = withEngagement.length
+    ? withEngagement.reduce((s, i) => s + (i.engagement ?? 0), 0) / withEngagement.length
+    : 0;
+  const totalReach = items.reduce((s, i) => s + (i.reach ?? 0), 0);
 
   return (
     <div className="space-y-6">
@@ -111,10 +51,16 @@ export default function PortfolioPage() {
         </Button>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Completed', value: demoPortfolio.length + ' campaigns' },
+          { label: 'Completed', value: items.length + ' campaigns' },
           { label: 'Total Reach', value: formatNumber(totalReach) },
           { label: 'Avg Engagement', value: avgEngagement.toFixed(1) + '%' },
           { label: 'Total Earned', value: formatCurrency(totalEarnings) },
@@ -129,57 +75,76 @@ export default function PortfolioPage() {
       </div>
 
       {/* Portfolio grid */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {demoPortfolio.map(item => (
-          <Card key={item.id} className="group overflow-hidden hover:shadow-md transition-shadow">
-            <div className={`h-20 bg-gradient-to-r ${item.color} relative`}>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-white font-bold text-lg opacity-30">{item.platform}</span>
-              </div>
-              <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/20 backdrop-blur-sm text-white text-xs px-2 py-0.5 rounded-full">
-                <CheckCircle className="h-3 w-3" /> Completed
-              </div>
-            </div>
-
-            <CardContent className="pt-4 pb-5">
-              <div className="flex items-start justify-between mb-1">
-                <h3 className="font-semibold text-foreground text-sm leading-snug">{item.title}</h3>
-              </div>
-              <p className="text-xs text-muted-foreground mb-3">{item.brand} · {item.completedAt}</p>
-
-              <div className="flex flex-wrap gap-1 mb-3">
-                {item.tags.map(t => (
-                  <span key={t} className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">{t}</span>
-                ))}
-                <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">{item.type}</span>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center border-t border-border pt-3">
-                <div>
-                  <p className="text-xs font-bold text-foreground">{formatNumber(item.reach)}</p>
-                  <p className="text-[10px] text-muted-foreground">Reach</p>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          Loading portfolio...
+        </div>
+      ) : items.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground">
+          No completed work yet. Finish a campaign or add an external sample to build your portfolio.
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {items.map((item, i) => {
+            const color = GRADIENTS[i % GRADIENTS.length];
+            return (
+              <Card key={item.id} className="group overflow-hidden hover:shadow-md transition-shadow">
+                <div className={`h-20 bg-gradient-to-r ${color} relative`}>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-white font-bold text-lg opacity-30">{item.platform}</span>
+                  </div>
+                  <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/20 backdrop-blur-sm text-white text-xs px-2 py-0.5 rounded-full">
+                    <CheckCircle className="h-3 w-3" /> Completed
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-foreground">{item.engagement}%</p>
-                  <p className="text-[10px] text-muted-foreground">Engagement</p>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-green-600">{formatCurrency(item.earnings)}</p>
-                  <p className="text-[10px] text-muted-foreground">Earned</p>
-                </div>
-              </div>
 
-              {/* Star rating */}
-              <div className="flex items-center gap-0.5 mt-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className={`h-3.5 w-3.5 ${i < item.rating ? 'text-yellow-400 fill-yellow-400' : 'text-muted'}`} />
-                ))}
-                <span className="text-xs text-muted-foreground ml-1">Brand rating</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                <CardContent className="pt-4 pb-5">
+                  <div className="flex items-start justify-between mb-1">
+                    <h3 className="font-semibold text-foreground text-sm leading-snug">{item.title}</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    {item.brand} · {new Date(item.completedAt).toLocaleDateString('en-KE', { month: 'short', year: 'numeric' })}
+                  </p>
+
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {item.tags.map(t => (
+                      <span key={t} className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">{t}</span>
+                    ))}
+                    {item.type && <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">{item.type}</span>}
+                  </div>
+
+                  {(item.reach != null || item.engagement != null || item.earnings != null) && (
+                    <div className="grid grid-cols-3 gap-2 text-center border-t border-border pt-3">
+                      <div>
+                        <p className="text-xs font-bold text-foreground">{item.reach != null ? formatNumber(item.reach) : '—'}</p>
+                        <p className="text-[10px] text-muted-foreground">Reach</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-foreground">{item.engagement != null ? `${item.engagement}%` : '—'}</p>
+                        <p className="text-[10px] text-muted-foreground">Engagement</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-green-600">{item.earnings != null ? formatCurrency(item.earnings) : '—'}</p>
+                        <p className="text-[10px] text-muted-foreground">Earned</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {item.rating != null && (
+                    <div className="flex items-center gap-0.5 mt-3">
+                      {Array.from({ length: 5 }).map((_, idx) => (
+                        <Star key={idx} className={`h-3.5 w-3.5 ${idx < item.rating! ? 'text-yellow-400 fill-yellow-400' : 'text-muted'}`} />
+                      ))}
+                      <span className="text-xs text-muted-foreground ml-1">Brand rating</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

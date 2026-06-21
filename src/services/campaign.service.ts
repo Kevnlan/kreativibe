@@ -1,5 +1,5 @@
 import { apiClient } from '../lib/api-client';
-import { normalizeCampaign, normalizeCampaignList, normalizeApplication, normalizeApplicationList } from '../lib/normalize';
+import { normalizeCampaign, normalizeCampaignList, normalizeApplication, normalizeApplicationList, normalizeProposal } from '../lib/normalize';
 import {
   Campaign,
   RawCampaign,
@@ -18,6 +18,12 @@ import {
   CampaignBrief,
   PackageOption,
   AiConversation,
+  Proposal,
+  RawProposal,
+  SaveProposalData,
+  Milestone,
+  MilestoneDelivery,
+  SubmitMilestoneDeliveryData,
 } from '../types/campaign.types';
 
 export const campaignService = {
@@ -139,5 +145,45 @@ export const campaignService = {
 
   async deleteAiConversation(id: string): Promise<void> {
     return apiClient.delete(`/campaigns/ai/conversations/${id}`);
+  },
+
+  async saveProposal(campaignId: string, data: SaveProposalData): Promise<Proposal> {
+    const raw = await apiClient.post<RawProposal>(`/campaigns/${campaignId}/proposal/save`, data);
+    return normalizeProposal(raw);
+  },
+
+  async submitProposal(campaignId: string): Promise<Proposal> {
+    const raw = await apiClient.post<RawProposal>(`/campaigns/${campaignId}/proposal/submit`, {});
+    return normalizeProposal(raw);
+  },
+
+  async getProposal(campaignId: string): Promise<Proposal> {
+    const raw = await apiClient.post<RawProposal>(`/campaigns/${campaignId}/proposal/get`, {});
+    return normalizeProposal(raw);
+  },
+
+  async listMilestones(campaignId: string): Promise<Milestone[]> {
+    const res = await apiClient.post<{ milestones: Milestone[] }>(`/campaigns/${campaignId}/milestones/list`, {});
+    return res.milestones;
+  },
+
+  async getMilestoneDelivery(campaignId: string, milestoneId: string): Promise<MilestoneDelivery> {
+    return apiClient.post(`/campaigns/${campaignId}/milestones/${milestoneId}/delivery/get`, {});
+  },
+
+  async submitMilestoneDelivery(campaignId: string, milestoneId: string, data: SubmitMilestoneDeliveryData): Promise<MilestoneDelivery> {
+    return apiClient.post(`/campaigns/${campaignId}/milestones/${milestoneId}/delivery/submit`, data);
+  },
+
+  async approveMilestoneDelivery(campaignId: string, milestoneId: string): Promise<{ milestoneId: string; status: string; approvedAt: string }> {
+    return apiClient.post(`/campaigns/${campaignId}/milestones/${milestoneId}/delivery/approve`, {});
+  },
+
+  async rejectMilestoneDelivery(campaignId: string, milestoneId: string, reason: string): Promise<{ milestoneId: string; status: string; reviewNotes: string }> {
+    return apiClient.post(`/campaigns/${campaignId}/milestones/${milestoneId}/delivery/reject`, { reason });
+  },
+
+  async requestMilestoneRevision(campaignId: string, milestoneId: string, notes: string): Promise<{ milestoneId: string; status: string; reviewNotes: string }> {
+    return apiClient.post(`/campaigns/${campaignId}/milestones/${milestoneId}/delivery/request-revision`, { notes });
   },
 };

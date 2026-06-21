@@ -171,3 +171,86 @@ export interface AiConversation {
   createdAt: string;
   updatedAt: string;
 }
+
+export type ProposalStatus = 'DRAFT' | 'SUBMITTED';
+
+export interface RawProposal {
+  id: string;
+  campaignId: string;
+  creatorUserId: string;
+  status: ProposalStatus;
+  proposedRate?: string | number | null;
+  currency?: string | null;
+  deliverables: string[];
+  timeline?: string | null;
+  coverLetter?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  submittedAt?: string | null;
+}
+
+export interface Proposal {
+  id: string;
+  campaignId: string;
+  creatorUserId: string;
+  status: ProposalStatus;
+  proposedRate?: number;
+  currency?: string;
+  deliverables: string[];
+  timeline?: string;
+  coverLetter?: string;
+  createdAt: string;
+  updatedAt: string;
+  submittedAt?: string;
+}
+
+export interface SaveProposalData {
+  proposedRate: number;
+  currency: string;
+  deliverables: string[];
+  timeline: string;
+  coverLetter: string;
+}
+
+export type MilestoneStatus = 'PENDING' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'REVISION_REQUESTED';
+
+export interface Milestone {
+  id: string;
+  campaignId: string;
+  title: string;
+  description?: string;
+  dueDate?: string;
+  amount: number;
+  currency: string;
+  status: MilestoneStatus;
+  deliverables: string[];
+  submittedAt?: string;
+  approvedAt?: string;
+}
+
+export type MilestoneDeliveryItemType = 'IMAGE' | 'VIDEO' | 'AUDIO' | 'LINK';
+
+export interface MilestoneDeliveryItem {
+  title: string;
+  type: MilestoneDeliveryItemType;
+  url: string;
+  thumbnail?: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface MilestoneDelivery {
+  milestoneId: string;
+  milestoneTitle: string;
+  submittedBy: string;
+  submittedAt: string;
+  items: MilestoneDeliveryItem[];
+  notes?: string;
+  status: MilestoneStatus;
+  reviewNotes?: string;
+}
+
+export interface SubmitMilestoneDeliveryData {
+  items: MilestoneDeliveryItem[];
+  notes?: string;
+}
