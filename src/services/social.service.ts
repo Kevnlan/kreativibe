@@ -1,5 +1,5 @@
 import { apiClient } from '../lib/api-client';
-import { 
+import {
   SocialAccount,
   SocialAccountListResponse,
   ConnectSocialAccountRequest,
@@ -12,11 +12,11 @@ import {
 
 export const socialService = {
   async getAccounts(): Promise<SocialAccountListResponse> {
-    return apiClient.get('/social/accounts');
+    return apiClient.post('/social/accounts/list', {});
   },
 
   async getAccountById(id: string): Promise<SocialAccount> {
-    return apiClient.get(`/social/accounts/${id}`);
+    return apiClient.post(`/social/accounts/${id}/get`, {});
   },
 
   async connectAccount(data: ConnectSocialAccountRequest): Promise<ConnectSocialAccountResponse> {
@@ -24,11 +24,11 @@ export const socialService = {
   },
 
   async handleCallback(platform: SocialPlatform, data: SocialAccountCallback): Promise<SocialAccount> {
-    return apiClient.post(`/social/callback/${platform.toLowerCase()}`, data);
+    return apiClient.post(`/social/callback/${platform}`, data);
   },
 
   async disconnectAccount(id: string): Promise<void> {
-    return apiClient.delete(`/social/accounts/${id}`);
+    return apiClient.post(`/social/accounts/${id}/disconnect`, {});
   },
 
   async refreshToken(data: RefreshTokenRequest): Promise<RefreshTokenResponse> {
@@ -36,6 +36,6 @@ export const socialService = {
   },
 
   async syncAccount(id: string): Promise<SocialAccount> {
-    return apiClient.post(`/social/accounts/${id}/sync`);
+    return apiClient.post(`/social/accounts/${id}/sync`, {});
   },
 };

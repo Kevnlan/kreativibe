@@ -7,6 +7,7 @@ import { Button, Input, Card, CardContent, CardHeader, CardTitle, StatusBadge } 
 import { ImageUploader } from '@/components/content/ImageUploader';
 import { PlatformSelector } from '@/components/content/PlatformSelector';
 import { Content, ContentCategory, ContentStatus, Platform, UpdateContentData } from '@/types/api-contracts/content.types';
+import { contentService } from '@/services/content.service';
 
 const CATEGORIES: { value: ContentCategory; label: string }[] = [
   { value: 'FASHION', label: 'Fashion' },
@@ -50,46 +51,18 @@ export default function EditContentPage() {
   const loadContent = async () => {
     setLoading(true);
     try {
-      // Mock data - replace with actual API call
-      const mockContent: Content = {
-        id: contentId,
-        creatorId: 'user-1',
-        type: 'IMAGE',
-        format: 'IMAGE',
-        metadata: {
-          title: 'Summer Beach Lifestyle',
-          description: 'Beautiful beach sunset photos',
-          category: 'LIFESTYLE',
-          platforms: ['INSTAGRAM', 'FACEBOOK'],
-          tags: ['summer', 'beach', 'sunset'],
-          brand: 'Nike',
-        },
-        coverImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400',
-        mediaUrls: ['https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800'],
-        price: 5000,
-        currency: 'KES',
-        status: 'PUBLISHED',
-        moderationStatus: 'APPROVED',
-        currentVersion: 1,
-        views: 245,
-        likes: 32,
-        purchases: 3,
-        revenue: 15000,
-        createdAt: '2024-03-15T10:00:00Z',
-        updatedAt: '2024-03-15T10:00:00Z',
-        publishedAt: '2024-03-15T12:00:00Z',
-      };
+      const loaded = await contentService.getContentById(contentId);
 
-      setContent(mockContent);
-      setTitle(mockContent.metadata.title);
-      setDescription(mockContent.metadata.description || '');
-      setCategory(mockContent.metadata.category);
-      setPlatforms(mockContent.metadata.platforms);
-      setTags(mockContent.metadata.tags?.join(', ') || '');
-      setBrand(mockContent.metadata.brand || '');
-      setPrice(mockContent.price);
-      setStatus(mockContent.status);
-      setPreviews(mockContent.mediaUrls);
+      setContent(loaded);
+      setTitle(loaded.metadata.title);
+      setDescription(loaded.metadata.description || '');
+      setCategory(loaded.metadata.category);
+      setPlatforms(loaded.metadata.platforms);
+      setTags(loaded.metadata.tags?.join(', ') || '');
+      setBrand(loaded.metadata.brand || '');
+      setPrice(loaded.price);
+      setStatus(loaded.status);
+      setPreviews(loaded.mediaUrls);
     } catch (error) {
       console.error('Failed to load content:', error);
     } finally {
@@ -115,9 +88,8 @@ export default function EditContentPage() {
         coverImage: previews[0],
       };
 
-      // Mock save - replace with actual API call
-      console.log('Updating content:', updateData);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const updated = await contentService.updateContent(contentId, updateData);
+      setContent(updated);
 
       router.push('/dashboard/creative/content?updated=true');
     } catch (error) {
@@ -130,8 +102,7 @@ export default function EditContentPage() {
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this content? This action cannot be undone.')) {
       try {
-        // Mock delete - replace with actual API call
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await contentService.deleteContent(contentId);
         router.push('/dashboard/creative/content?deleted=true');
       } catch (error) {
         console.error('Failed to delete content:', error);

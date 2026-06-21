@@ -117,6 +117,31 @@ export interface CreateContentData {
   thumbnailUrl?: string;
   price: number;
   currency?: string;
+  intent: 'DRAFT' | 'SUBMIT';
+}
+
+export interface ContentAdviceRequest {
+  contentType: ContentType;
+  niche: string;
+  platforms: Platform[];
+  currentFollowers: number;
+  engagementRate: 'LOW' | 'MEDIUM' | 'HIGH';
+  pricingStrategy: string;
+  targetAudience: string;
+  contentStyle: string;
+}
+
+export interface ContentAdviceResponse {
+  suggestedPricePerPost: number;
+  packageDealPrice: number;
+  potentialMonthlyEarnings: number;
+  growthTips: string[];
+  contentStrategy: {
+    postFrequency: string;
+    bestPostingTimes: string[];
+    recommendedHashtags: string[];
+  };
+  brandAttractionTactics: string[];
 }
 
 export interface UpdateContentData {

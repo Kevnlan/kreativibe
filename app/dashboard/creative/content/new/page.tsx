@@ -12,7 +12,7 @@ import { PlatformSelector } from '@/components/content/PlatformSelector';
 import type { WizardStep } from '@/components/ui/multi-step-wizard';
 import { ContentType, ContentFormat, ContentCategory, Platform, CreateContentData } from '@/types/api-contracts/content.types';
 import { useUser } from '@/contexts/AuthContext';
-import { generateId } from '@/lib/mock-data/generators';
+import { contentService } from '@/services/content.service';
 
 const CONTENT_TYPES = [
   { value: 'IMAGE' as ContentType, label: 'Image', icon: ImageIcon, description: 'Photos, graphics, designs' },
@@ -97,7 +97,7 @@ export default function NewContentPage() {
     setPreviews(newPreviews);
   };
 
-  const buildContentData = (status: 'DRAFT' | 'SUBMITTED'): CreateContentData => ({
+  const buildContentData = (intent: 'DRAFT' | 'SUBMIT'): CreateContentData => ({
     type: contentType,
     format,
     metadata: {
@@ -113,15 +113,14 @@ export default function NewContentPage() {
     thumbnailUrl: previews[0],
     price,
     currency,
+    intent,
   });
 
   const handleSaveDraft = async () => {
     if (!user) return;
     setIsSubmitting(true);
     try {
-      const contentData = buildContentData('DRAFT');
-      console.log('Saving draft:', contentData);
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await contentService.createContent(buildContentData('DRAFT'));
       router.push('/dashboard/creative/content?draft=true');
     } catch (error) {
       console.error('Failed to save draft:', error);
@@ -134,9 +133,7 @@ export default function NewContentPage() {
     if (!user) return;
     setIsSubmitting(true);
     try {
-      const contentData = buildContentData('SUBMITTED');
-      console.log('Submitting for review:', contentData);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await contentService.createContent(buildContentData('SUBMIT'));
       router.push('/dashboard/creative/content?success=true');
     } catch (error) {
       console.error('Failed to submit content:', error);
