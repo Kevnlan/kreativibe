@@ -109,6 +109,6 @@ export const brandService = {
   },
 
   async getBrandPublicProfile(brandProfileId: string): Promise<BrandPublicProfile> {
-    return apiClient.post(`/brands/${brandProfileId}/get`, {});
+    return apiClient.post('/brands/get', { id: brandProfileId });
   },
 };

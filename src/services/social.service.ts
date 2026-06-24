@@ -16,7 +16,7 @@ export const socialService = {
   },
 
   async getAccountById(id: string): Promise<SocialAccount> {
-    return apiClient.post(`/social/accounts/${id}/get`, {});
+    return apiClient.post('/social/accounts/get', { id });
   },
 
   async connectAccount(data: ConnectSocialAccountRequest): Promise<ConnectSocialAccountResponse> {
@@ -24,11 +24,11 @@ export const socialService = {
   },
 
   async handleCallback(platform: SocialPlatform, data: SocialAccountCallback): Promise<SocialAccount> {
-    return apiClient.post(`/social/callback/${platform}`, data);
+    return apiClient.post('/social/callback', { platform, ...data });
   },
 
   async disconnectAccount(id: string): Promise<void> {
-    return apiClient.post(`/social/accounts/${id}/disconnect`, {});
+    return apiClient.post('/social/accounts/disconnect', { id });
   },
 
   async refreshToken(data: RefreshTokenRequest): Promise<RefreshTokenResponse> {
@@ -36,6 +36,6 @@ export const socialService = {
   },
 
   async syncAccount(id: string): Promise<SocialAccount> {
-    return apiClient.post(`/social/accounts/${id}/sync`, {});
+    return apiClient.post('/social/accounts/sync', { id });
   },
 };

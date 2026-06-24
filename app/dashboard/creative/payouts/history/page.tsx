@@ -1,63 +1,116 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PayoutStatusTracker, PayoutStatusEvent } from '@/components/payments/PayoutStatusTracker';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Wallet, Download, Filter } from 'lucide-react';
+import { ArrowLeft, Wallet, Download, Filter, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { withdrawalService } from '@/services/withdrawal.service';
 
-// Mock data for development
-const mockPayoutEvents: PayoutStatusEvent[] = [
-  {
-    id: 'e1',
-    timestamp: '2024-01-15T10:00:00Z',
-    type: 'requested',
+// The withdrawals backend returns the raw store record shape, which differs from the
+// declared WithdrawalRequest contract type (e.g. `requestedAt` not `createdAt`, no
+// `currency`/`netAmount` fields). Model the page against what the API actually returns.
+interface WithdrawalRecord {
+  id: string;
+  creatorUserId: string;
+  amount: number;
+  fee: number;
+  method: 'MPESA' | 'BANK';
+  accountDetails: Record<string, string>;
+  status: 'PENDING' | 'PROCESSING' | 'APPROVED' | 'COMPLETED' | 'REJECTED' | 'FAILED' | 'CANCELLED';
+  adminComments?: string;
+  rejectionReason?: string;
+  requestedAt: string;
+  approvedAt?: string;
+  processingAt?: string;
+  completedAt?: string;
+  rejectedAt?: string;
+  cancelledAt?: string;
+}
+
+interface TimelineEntry {
+  status: string;
+  label: string;
+  timestamp: string;
+}
+
+const CURRENCY = 'KES';
+
+const TIMELINE_STATUS_TO_EVENT_TYPE: Record<string, PayoutStatusEvent['type']> = {
+  PENDING: 'requested',
+  APPROVED: 'approved',
+  PROCESSING: 'processing',
+  COMPLETED: 'completed',
+  REJECTED: 'failed',
+  CANCELLED: 'failed',
+};
+
+function toPayoutStatusEvents(timeline: TimelineEntry[]): PayoutStatusEvent[] {
+  return timeline.map((entry, i) => ({
+    id: `${entry.status}-${i}`,
+    timestamp: entry.timestamp,
+    type: TIMELINE_STATUS_TO_EVENT_TYPE[entry.status] ?? 'processing',
     status: 'completed',
-    actor: 'You',
-    message: 'Payout requested',
-    details: 'Requested payout for Summer Fashion Campaign',
-    amount: 45000,
-    currency: 'KES',
-  },
-  {
-    id: 'e2',
-    timestamp: '2024-01-15T14:00:00Z',
-    type: 'approved',
-    status: 'completed',
-    actor: 'Admin',
-    message: 'Payout approved',
-    details: 'Approved by platform administrator',
-    amount: 45000,
-    currency: 'KES',
-  },
-  {
-    id: 'e3',
-    timestamp: '2024-01-15T14:30:00Z',
-    type: 'processing',
-    status: 'completed',
-    actor: 'System',
-    message: 'Processing initiated',
-    details: 'Bank transfer initiated',
-    amount: 45000,
-    currency: 'KES',
-  },
-  {
-    id: 'e4',
-    timestamp: '2024-01-16T09:00:00Z',
-    type: 'completed',
-    status: 'completed',
-    actor: 'System',
-    message: 'Payout completed',
-    details: 'Funds successfully transferred to your account',
-    amount: 45000,
-    currency: 'KES',
-  },
-];
+    message: entry.label,
+    currency: CURRENCY,
+  }));
+}
+
+function toTrackerStatus(status: WithdrawalRecord['status']): string {
+  switch (status) {
+    case 'PENDING':
+      return 'requested';
+    case 'APPROVED':
+      return 'approved';
+    case 'PROCESSING':
+      return 'processing';
+    case 'COMPLETED':
+      return 'completed';
+    case 'REJECTED':
+    case 'FAILED':
+    case 'CANCELLED':
+      return 'failed';
+    default:
+      return 'requested';
+  }
+}
 
 export default function PayoutHistoryPage() {
   const router = useRouter();
-  const [selectedPayout, setSelectedPayout] = useState<string | null>('p1');
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
+  const [selectedPayout, setSelectedPayout] = useState<string | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<(WithdrawalRecord & { timeline?: TimelineEntry[] }) | null>(null);
   const [filterPeriod, setFilterPeriod] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    withdrawalService
+      .getWithdrawals()
+      .then((res: any) => {
+        const list: WithdrawalRecord[] = res.withdrawals ?? [];
+        setWithdrawals(list);
+        if (list.length > 0) {
+          setSelectedPayout(list[0].id);
+        }
+      })
+      .catch(() => setError('Failed to load payout history. Please try again.'))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPayout) {
+      setSelectedDetail(null);
+      return;
+    }
+    setIsDetailLoading(true);
+    withdrawalService
+      .getWithdrawalById(selectedPayout)
+      .then((data: any) => setSelectedDetail(data))
+      .catch(() => setError('Failed to load payout details. Please try again.'))
+      .finally(() => setIsDetailLoading(false));
+  }, [selectedPayout]);
 
   const handleBack = () => {
     router.push('/dashboard/creative/wallet');
@@ -66,12 +119,6 @@ export default function PayoutHistoryPage() {
   const handleDownloadReceipt = () => {
     console.log('Downloading receipt');
   };
-
-  const mockPayouts = [
-    { id: 'p1', amount: 45000, currency: 'KES', date: '2024-01-16', status: 'completed', campaign: 'Summer Fashion' },
-    { id: 'p2', amount: 60000, currency: 'KES', date: '2024-01-10', status: 'completed', campaign: 'Tech Review' },
-    { id: 'p3', amount: 30000, currency: 'KES', date: '2024-01-05', status: 'completed', campaign: 'Food Delivery' },
-  ];
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -91,72 +138,96 @@ export default function PayoutHistoryPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Payout List */}
-        <div className="lg:col-span-1 space-y-4">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <select
-              value={filterPeriod}
-              onChange={(e) => setFilterPeriod(e.target.value)}
-              className="px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="all">All Time</option>
-              <option value="30">Last 30 Days</option>
-              <option value="90">Last 3 Months</option>
-              <option value="365">Last Year</option>
-            </select>
-          </div>
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
-          <div className="space-y-2">
-            {mockPayouts.map((payout) => (
-              <button
-                key={payout.id}
-                onClick={() => setSelectedPayout(payout.id)}
-                className={`w-full p-4 rounded-lg border text-left transition-all ${
-                  selectedPayout === payout.id
-                    ? 'border-brand-blue bg-brand-blue/5'
-                    : 'border-border hover:border-brand-blue/50'
-                }`}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          Loading payout history...
+        </div>
+      ) : withdrawals.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground">
+          No payouts yet. Withdrawals you request will appear here.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Payout List */}
+          <div className="lg:col-span-1 space-y-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <select
+                value={filterPeriod}
+                onChange={(e) => setFilterPeriod(e.target.value)}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold">
-                    {payout.currency} {payout.amount.toLocaleString()}
-                  </span>
-                  <span className="text-xs text-muted-foreground">{payout.date}</span>
+                <option value="all">All Time</option>
+                <option value="30">Last 30 Days</option>
+                <option value="90">Last 3 Months</option>
+                <option value="365">Last Year</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              {withdrawals.map((payout) => (
+                <button
+                  key={payout.id}
+                  onClick={() => setSelectedPayout(payout.id)}
+                  className={`w-full p-4 rounded-lg border text-left transition-all ${
+                    selectedPayout === payout.id
+                      ? 'border-brand-blue bg-brand-blue/5'
+                      : 'border-border hover:border-brand-blue/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold">
+                      {CURRENCY} {payout.amount.toLocaleString()}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(payout.requestedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground capitalize">{payout.status.toLowerCase()}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Status Tracker */}
+          <div className="lg:col-span-2">
+            {isDetailLoading ? (
+              <div className="flex items-center justify-center py-16 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                Loading details...
+              </div>
+            ) : selectedDetail ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold">Payout Details</h2>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadReceipt}
+                    leftIcon={<Download className="h-4 w-4" />}
+                  >
+                    Download Receipt
+                  </Button>
                 </div>
-                <p className="text-sm text-muted-foreground">{payout.campaign}</p>
-              </button>
-            ))}
+
+                <PayoutStatusTracker
+                  events={toPayoutStatusEvents(selectedDetail.timeline ?? [])}
+                  currentStatus={toTrackerStatus(selectedDetail.status)}
+                  amount={selectedDetail.amount}
+                  currency={CURRENCY}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
-
-        {/* Status Tracker */}
-        <div className="lg:col-span-2">
-          {selectedPayout && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Payout Details</h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDownloadReceipt}
-                  leftIcon={<Download className="h-4 w-4" />}
-                >
-                  Download Receipt
-                </Button>
-              </div>
-
-              <PayoutStatusTracker
-                events={mockPayoutEvents}
-                currentStatus="completed"
-                amount={45000}
-                currency="KES"
-              />
-            </div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }

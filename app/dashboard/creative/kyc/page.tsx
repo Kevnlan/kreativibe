@@ -1,16 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { Shield, Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { Button, Input, FileUploader, MultiStepWizard, Card, CardContent } from '@/components/ui';
 import type { WizardStep } from '@/components/ui/multi-step-wizard';
 import type { UploadedFile } from '@/components/ui/file-uploader';
+import { kycService, KycStatus } from '@/services/kyc.service';
+import { uploadService } from '@/services/upload.service';
 
 export default function KYCPage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [kycStatus, setKycStatus] = useState<KycStatus | null>(null);
+  const [isStatusLoading, setIsStatusLoading] = useState(true);
+
+  useEffect(() => {
+    kycService
+      .getKycStatus()
+      .then(setKycStatus)
+      .catch(() => setKycStatus(null))
+      .finally(() => setIsStatusLoading(false));
+  }, []);
 
   // Personal Information
   const [nationalId, setNationalId] = useState('');
@@ -34,14 +47,46 @@ export default function KYCPage() {
 
   const [termsAccepted, setTermsAccepted] = useState(false);
 
+  const isResubmit = kycStatus?.status === 'REJECTED';
+
   const handleComplete = async () => {
     setIsSubmitting(true);
+    setSubmitError(null);
     try {
-      // Mock API call - replace with actual KYC submission
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const [idFrontUpload, idBackUpload, kraCertUpload] = await Promise.all([
+        uploadService.uploadFile(idFrontFiles[0], undefined, 'KYC_ID_FRONT'),
+        uploadService.uploadFile(idBackFiles[0], undefined, 'KYC_ID_BACK'),
+        uploadService.uploadFile(kraCertFiles[0], undefined, 'KYC_KRA_CERT'),
+      ]);
+
+      const data = {
+        nationalId,
+        kraPin,
+        phone,
+        city,
+        dateOfBirth,
+        idFrontUrl: idFrontUpload.url,
+        idBackUrl: idBackUpload.url,
+        kraCertUrl: kraCertUpload.url,
+        bio: '',
+        categories: [] as string[],
+        instagram: instagram || undefined,
+        instagramFollowers: instagramFollowers || undefined,
+        tiktok: tiktok || undefined,
+        tiktokFollowers: tiktokFollowers || undefined,
+        youtube: youtube || undefined,
+        youtubeFollowers: youtubeFollowers || undefined,
+      };
+
+      if (isResubmit) {
+        await kycService.resubmitKyc(data);
+      } else {
+        await kycService.submitKyc(data);
+      }
       router.push('/dashboard/creative?kyc=submitted');
     } catch (error) {
       console.error('Failed to submit KYC:', error);
+      setSubmitError('Failed to submit KYC verification. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -358,8 +403,54 @@ export default function KYCPage() {
     },
   ];
 
+  if (isStatusLoading) {
+    return (
+      <div className="flex items-center justify-center py-24 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+        Checking verification status...
+      </div>
+    );
+  }
+
+  if (kycStatus && (kycStatus.status === 'PENDING' || kycStatus.status === 'SUBMITTED' || kycStatus.status === 'VERIFIED')) {
+    const isVerified = kycStatus.status === 'VERIFIED';
+    return (
+      <div className="max-w-2xl mx-auto py-16 px-4 text-center">
+        <div className={`inline-flex p-4 rounded-full mb-4 ${isVerified ? 'bg-green-100' : 'bg-brand-blue/10'}`}>
+          {isVerified ? (
+            <CheckCircle className="h-12 w-12 text-green-600" />
+          ) : (
+            <Shield className="h-12 w-12 text-brand-blue" />
+          )}
+        </div>
+        <h2 className="text-2xl font-bold mb-2">
+          {isVerified ? 'Identity Verified' : 'Verification In Progress'}
+        </h2>
+        <p className="text-muted-foreground mb-6">
+          {isVerified
+            ? 'Your identity has been verified. You can now start earning on the platform.'
+            : "Your KYC submission is under review. We'll notify you once it's complete, usually within 24-48 hours."}
+        </p>
+        <Button variant="brand" onClick={() => router.push('/dashboard/creative')}>
+          Go to Dashboard
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto py-8 px-4">
+      {kycStatus?.status === 'REJECTED' && (
+        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">
+          <p className="font-medium mb-1">Your previous submission was rejected</p>
+          <p>{kycStatus.adminComments || 'Please review your information and resubmit.'}</p>
+        </div>
+      )}
+      {submitError && (
+        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {submitError}
+        </div>
+      )}
       <MultiStepWizard
         steps={steps}
         currentStep={currentStep}

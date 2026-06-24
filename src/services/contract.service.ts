@@ -5,29 +5,29 @@ import { Contract, RawContract, GenerateContractData, UpdateContractData, SignCo
 export const contractService = {
   // BRAND only. 409 if a contract already exists for this campaign.
   async generateContract(campaignId: string, data: GenerateContractData): Promise<Contract> {
-    const raw = await apiClient.post<RawContract>(`/campaigns/${campaignId}/contract/generate`, data);
+    const raw = await apiClient.post<RawContract>('/campaigns/contract/generate', { campaignId, ...data });
     return normalizeContract(raw);
   },
 
   async getContract(campaignId: string): Promise<Contract> {
-    const raw = await apiClient.post<RawContract>(`/campaigns/${campaignId}/contract/get`, {});
+    const raw = await apiClient.post<RawContract>('/campaigns/contract/get', { campaignId });
     return normalizeContract(raw);
   },
 
   // BRAND only, only while status is DRAFT.
   async updateContractClauses(campaignId: string, data: UpdateContractData): Promise<Contract> {
-    const raw = await apiClient.post<RawContract>(`/campaigns/${campaignId}/contract/update`, data);
+    const raw = await apiClient.post<RawContract>('/campaigns/contract/update', { campaignId, ...data });
     return normalizeContract(raw);
   },
 
   // BRAND or CREATOR — call once per side. DRAFT -> PARTIALLY_SIGNED -> ACTIVE.
   async signContract(campaignId: string, data: SignContractData): Promise<Contract> {
-    const raw = await apiClient.post<RawContract>(`/campaigns/${campaignId}/contract/sign`, data);
+    const raw = await apiClient.post<RawContract>('/campaigns/contract/sign', { campaignId, ...data });
     return normalizeContract(raw);
   },
 
   // STUBBED on the backend — returns a deterministic fake URL, no real PDF renderer yet.
   async downloadContract(campaignId: string): Promise<{ url: string }> {
-    return apiClient.post(`/campaigns/${campaignId}/contract/download`, {});
+    return apiClient.post('/campaigns/contract/download', { campaignId });
   },
 };

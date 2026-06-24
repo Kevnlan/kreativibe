@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Image as ImageIcon, Video, Music, Package, Eye, Edit, Trash2, Copy, Sparkles } from 'lucide-react';
+import { Plus, Image as ImageIcon, Video, Music, Package, Eye, Edit, Trash2, Copy, Sparkles, Loader2 } from 'lucide-react';
 import { Button, DataTable, StatCard, StatusBadge, Input, EmptyState } from '@/components/ui';
 import { Content, ContentStatus, ContentType } from '@/types/api-contracts/content.types';
 import { contentService } from '@/services/content.service';
@@ -13,6 +13,7 @@ export default function ContentManagementPage() {
   const user = useUser();
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<ContentStatus | 'ALL'>('ALL');
   const [filterType, setFilterType] = useState<ContentType | 'ALL'>('ALL');
@@ -25,25 +26,12 @@ export default function ContentManagementPage() {
 
   const loadContents = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await contentService.getMyContents();
       setContents(response.data || []);
     } catch {
-      // Fallback mock content when API is unavailable
-      setContents([
-        {
-          id: '1',
-          creatorId: user!.id,
-          type: 'IMAGE',
-          format: 'IMAGE',
-          metadata: { title: 'Summer Beach Lifestyle', description: 'Beautiful beach sunset photos', category: 'LIFESTYLE', platforms: ['INSTAGRAM', 'FACEBOOK'], tags: ['summer', 'beach', 'sunset'] },
-          coverImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400',
-          mediaUrls: [],
-          price: 5000, currency: 'KES', status: 'PUBLISHED', moderationStatus: 'APPROVED', currentVersion: 1,
-          views: 245, likes: 32, purchases: 3, revenue: 15000,
-          createdAt: '2024-03-15T10:00:00Z', updatedAt: '2024-03-15T10:00:00Z', publishedAt: '2024-03-15T12:00:00Z',
-        },
-      ]);
+      setError('Failed to load content. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -359,7 +347,14 @@ export default function ContentManagementPage() {
 
       {/* Content Table */}
       {loading ? (
-        <DataTable data={[]} columns={columns} loading={true} />
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          Loading content...
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
       ) : filteredContents.length === 0 ? (
         <EmptyState
           icon={<ImageIcon className="h-12 w-12" />}

@@ -8,12 +8,12 @@ export const educationService = {
   },
 
   async completeLesson(courseId: string, lessonId: string): Promise<CompleteLessonResponse> {
-    return apiClient.post(`/education/courses/${courseId}/lessons/${lessonId}/complete`, {});
+    return apiClient.post('/education/courses/lessons/complete', { courseId, lessonId });
   },
 
   // 400 COURSE_NOT_COMPLETED if the course doesn't offer certification or not all lessons are complete.
   async getCertificate(courseId: string): Promise<CertificateResponse> {
-    return apiClient.post(`/education/courses/${courseId}/certificate/get`, {});
+    return apiClient.post('/education/courses/certificate/get', { courseId });
   },
 
   async listStandards(): Promise<{ items: ContentStandard[] }> {

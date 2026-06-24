@@ -31,6 +31,6 @@ export const taxService = {
   },
 
   async deleteDocument(id: string): Promise<{ success: boolean }> {
-    return apiClient.post(`/tax/documents/${id}/delete`, {});
+    return apiClient.post('/tax/documents/delete', { id });
   },
 };

@@ -5,13 +5,13 @@ import { Plus, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { Button, DataTable, StatCard, StatusBadge, EmptyState } from '@/components/ui';
 import { WithdrawalRequest } from '@/types/api-contracts/withdrawal.types';
 import { withdrawalService } from '@/services/withdrawal.service';
-import { mockStore } from '@/lib/mock-data/mock-store';
 import { useUser } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
 export default function WithdrawalsPage() {
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const user = useUser();
   const router = useRouter();
 
@@ -23,12 +23,12 @@ export default function WithdrawalsPage() {
 
   const loadWithdrawals = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await withdrawalService.getWithdrawals();
-      setWithdrawals((response as any).withdrawals || (response as any).data || []);
+      setWithdrawals(response.withdrawals || []);
     } catch {
-      const data = mockStore.getWithdrawals(user!.id);
-      setWithdrawals(data);
+      setError('Failed to load withdrawals. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -192,6 +192,10 @@ export default function WithdrawalsPage() {
 
       {loading ? (
         <DataTable data={[]} columns={columns} loading={true} />
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
       ) : withdrawals.length === 0 ? (
         <EmptyState
           icon={<Clock className="h-12 w-12" />}

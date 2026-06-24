@@ -14,7 +14,7 @@ export const withdrawalService = {
   },
 
   async getWithdrawalById(id: string): Promise<WithdrawalRequest> {
-    return apiClient.post(`/withdrawals/${id}/get`, {});
+    return apiClient.post('/withdrawals/get', { id });
   },
 
   async createWithdrawal(data: CreateWithdrawalRequest): Promise<WithdrawalRequest> {
@@ -22,18 +22,18 @@ export const withdrawalService = {
   },
 
   async cancelWithdrawal(id: string): Promise<void> {
-    return apiClient.post(`/withdrawals/${id}/cancel`, {});
+    return apiClient.post('/withdrawals/cancel', { id });
   },
 
   async approveWithdrawal(id: string, data?: ApproveWithdrawalRequest): Promise<WithdrawalRequest> {
-    return apiClient.post(`/admin/withdrawals/${id}/approve`, data ?? {});
+    return apiClient.post('/admin/withdrawals/approve', { id, ...data });
   },
 
   async rejectWithdrawal(id: string, data: RejectWithdrawalRequest): Promise<WithdrawalRequest> {
-    return apiClient.post(`/admin/withdrawals/${id}/reject`, data);
+    return apiClient.post('/admin/withdrawals/reject', { id, ...data });
   },
 
   async processWithdrawal(id: string): Promise<WithdrawalRequest> {
-    return apiClient.post(`/admin/withdrawals/${id}/process`, {});
+    return apiClient.post('/admin/withdrawals/process', { id });
   },
 };

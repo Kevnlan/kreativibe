@@ -28,12 +28,12 @@ import {
 
 export const campaignService = {
   async list(filters?: CampaignFilters): Promise<CampaignListResponse> {
-    const raw = await apiClient.get<RawCampaignListResponse>('/campaigns', filters);
+    const raw = await apiClient.post<RawCampaignListResponse>('/campaigns/list', filters ?? {});
     return normalizeCampaignList(raw);
   },
 
   async get(id: string): Promise<Campaign> {
-    const raw = await apiClient.get<RawCampaign>(`/campaigns/${id}`);
+    const raw = await apiClient.post<RawCampaign>('/campaigns/get', { id });
     return normalizeCampaign(raw);
   },
 
@@ -43,41 +43,41 @@ export const campaignService = {
   },
 
   async update(id: string, data: Partial<CreateCampaignData>): Promise<Campaign> {
-    const raw = await apiClient.put<RawCampaign>(`/campaigns/${id}`, data);
+    const raw = await apiClient.post<RawCampaign>('/campaigns/update', { id, ...data });
     return normalizeCampaign(raw);
   },
 
   async deleteCampaign(id: string): Promise<void> {
-    return apiClient.delete(`/campaigns/${id}`);
+    return apiClient.post('/campaigns/delete', { id });
   },
 
   async publish(id: string): Promise<Campaign> {
-    const raw = await apiClient.post<RawCampaign>(`/campaigns/${id}/publish`);
+    const raw = await apiClient.post<RawCampaign>('/campaigns/publish', { id });
     return normalizeCampaign(raw);
   },
 
   async pause(id: string): Promise<Campaign> {
-    const raw = await apiClient.post<RawCampaign>(`/campaigns/${id}/pause`);
+    const raw = await apiClient.post<RawCampaign>('/campaigns/pause', { id });
     return normalizeCampaign(raw);
   },
 
   async resume(id: string): Promise<Campaign> {
-    const raw = await apiClient.post<RawCampaign>(`/campaigns/${id}/resume`);
+    const raw = await apiClient.post<RawCampaign>('/campaigns/resume', { id });
     return normalizeCampaign(raw);
   },
 
   async complete(id: string): Promise<Campaign> {
-    const raw = await apiClient.post<RawCampaign>(`/campaigns/${id}/complete`);
+    const raw = await apiClient.post<RawCampaign>('/campaigns/complete', { id });
     return normalizeCampaign(raw);
   },
 
   async cancel(id: string): Promise<Campaign> {
-    const raw = await apiClient.post<RawCampaign>(`/campaigns/${id}/cancel`);
+    const raw = await apiClient.post<RawCampaign>('/campaigns/cancel', { id });
     return normalizeCampaign(raw);
   },
 
   async stats(id: string): Promise<CampaignStats> {
-    return apiClient.get(`/campaigns/${id}/stats`);
+    return apiClient.post('/campaigns/stats', { id });
   },
 
   async browseMarketplace(filters?: MarketplaceCampaignFilters): Promise<CampaignListResponse> {
@@ -91,31 +91,31 @@ export const campaignService = {
   },
 
   async listApplications(campaignId: string): Promise<CampaignApplication[]> {
-    const raw = await apiClient.get<RawCampaignApplication[]>(`/campaigns/${campaignId}/applications`);
+    const raw = await apiClient.post<RawCampaignApplication[]>('/campaigns/applications/list', { id: campaignId });
     return normalizeApplicationList(raw);
   },
 
   async applyToCampaign(campaignId: string, data: ApplyToCampaignData): Promise<CampaignApplication> {
-    const raw = await apiClient.post<RawCampaignApplication>(`/campaigns/${campaignId}/applications`, data);
+    const raw = await apiClient.post<RawCampaignApplication>('/campaigns/applications/apply', { campaignId, ...data });
     return normalizeApplication(raw);
   },
 
   async getApplication(id: string): Promise<CampaignApplication> {
-    const raw = await apiClient.get<RawCampaignApplication>(`/campaigns/applications/${id}`);
+    const raw = await apiClient.post<RawCampaignApplication>('/campaigns/applications/get', { id });
     return normalizeApplication(raw);
   },
 
   async updateApplicationStatus(id: string, status: ApplicationStatus): Promise<CampaignApplication> {
-    const raw = await apiClient.patch<RawCampaignApplication>(`/campaigns/applications/${id}`, { status });
+    const raw = await apiClient.post<RawCampaignApplication>('/campaigns/applications/update', { id, status });
     return normalizeApplication(raw);
   },
 
   async withdrawApplication(id: string): Promise<void> {
-    return apiClient.delete(`/campaigns/applications/${id}`);
+    return apiClient.post('/campaigns/applications/withdraw', { id });
   },
 
   async myApplications(): Promise<CampaignApplication[]> {
-    const raw = await apiClient.get<RawCampaignApplication[]>('/creators/me/applications');
+    const raw = await apiClient.post<RawCampaignApplication[]>('/creators/me/applications', {});
     return normalizeApplicationList(raw);
   },
 
@@ -132,7 +132,7 @@ export const campaignService = {
   },
 
   async listAiConversations(): Promise<AiConversation[]> {
-    return apiClient.get('/campaigns/ai/conversations');
+    return apiClient.post('/campaigns/ai/conversations/list', {});
   },
 
   async saveAiConversation(title: string, messages: AiChatMessage[]): Promise<AiConversation> {
@@ -140,50 +140,50 @@ export const campaignService = {
   },
 
   async getAiConversation(id: string): Promise<AiConversation> {
-    return apiClient.get(`/campaigns/ai/conversations/${id}`);
+    return apiClient.post('/campaigns/ai/conversations/get', { id });
   },
 
   async deleteAiConversation(id: string): Promise<void> {
-    return apiClient.delete(`/campaigns/ai/conversations/${id}`);
+    return apiClient.post('/campaigns/ai/conversations/delete', { id });
   },
 
   async saveProposal(campaignId: string, data: SaveProposalData): Promise<Proposal> {
-    const raw = await apiClient.post<RawProposal>(`/campaigns/${campaignId}/proposal/save`, data);
+    const raw = await apiClient.post<RawProposal>('/campaigns/proposal/save', { campaignId, ...data });
     return normalizeProposal(raw);
   },
 
   async submitProposal(campaignId: string): Promise<Proposal> {
-    const raw = await apiClient.post<RawProposal>(`/campaigns/${campaignId}/proposal/submit`, {});
+    const raw = await apiClient.post<RawProposal>('/campaigns/proposal/submit', { campaignId });
     return normalizeProposal(raw);
   },
 
   async getProposal(campaignId: string): Promise<Proposal> {
-    const raw = await apiClient.post<RawProposal>(`/campaigns/${campaignId}/proposal/get`, {});
+    const raw = await apiClient.post<RawProposal>('/campaigns/proposal/get', { campaignId });
     return normalizeProposal(raw);
   },
 
   async listMilestones(campaignId: string): Promise<Milestone[]> {
-    const res = await apiClient.post<{ milestones: Milestone[] }>(`/campaigns/${campaignId}/milestones/list`, {});
+    const res = await apiClient.post<{ milestones: Milestone[] }>('/campaigns/milestones/list', { campaignId });
     return res.milestones;
   },
 
   async getMilestoneDelivery(campaignId: string, milestoneId: string): Promise<MilestoneDelivery> {
-    return apiClient.post(`/campaigns/${campaignId}/milestones/${milestoneId}/delivery/get`, {});
+    return apiClient.post('/campaigns/milestones/delivery/get', { campaignId, milestoneId });
   },
 
   async submitMilestoneDelivery(campaignId: string, milestoneId: string, data: SubmitMilestoneDeliveryData): Promise<MilestoneDelivery> {
-    return apiClient.post(`/campaigns/${campaignId}/milestones/${milestoneId}/delivery/submit`, data);
+    return apiClient.post('/campaigns/milestones/delivery/submit', { campaignId, milestoneId, ...data });
   },
 
   async approveMilestoneDelivery(campaignId: string, milestoneId: string): Promise<{ milestoneId: string; status: string; approvedAt: string }> {
-    return apiClient.post(`/campaigns/${campaignId}/milestones/${milestoneId}/delivery/approve`, {});
+    return apiClient.post('/campaigns/milestones/delivery/approve', { campaignId, milestoneId });
   },
 
   async rejectMilestoneDelivery(campaignId: string, milestoneId: string, reason: string): Promise<{ milestoneId: string; status: string; reviewNotes: string }> {
-    return apiClient.post(`/campaigns/${campaignId}/milestones/${milestoneId}/delivery/reject`, { reason });
+    return apiClient.post('/campaigns/milestones/delivery/reject', { campaignId, milestoneId, reason });
   },
 
   async requestMilestoneRevision(campaignId: string, milestoneId: string, notes: string): Promise<{ milestoneId: string; status: string; reviewNotes: string }> {
-    return apiClient.post(`/campaigns/${campaignId}/milestones/${milestoneId}/delivery/request-revision`, { notes });
+    return apiClient.post('/campaigns/milestones/delivery/request-revision', { campaignId, milestoneId, notes });
   },
 };

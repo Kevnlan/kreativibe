@@ -25,6 +25,6 @@ export const portfolioService = {
   },
 
   async deleteExternalItem(id: string): Promise<void> {
-    return apiClient.post(`/portfolio/${id}/delete`, {});
+    return apiClient.post('/portfolio/delete', { id });
   },
 };

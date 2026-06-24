@@ -1,68 +1,78 @@
 'use client';
 
-import { useState } from 'react';
-import { TaxReportGenerator } from '@/components/tax/TaxReportGenerator';
+import { useState, useEffect } from 'react';
+import { TaxReportGenerator, TaxReportData } from '@/components/tax/TaxReportGenerator';
 import { TaxDocumentUpload } from '@/components/tax/TaxDocumentUpload';
-import { TaxComplianceStatus, TaxComplianceItem } from '@/components/tax/TaxComplianceStatus';
+import { TaxComplianceStatus, TaxComplianceItem as TaxComplianceItemUi } from '@/components/tax/TaxComplianceStatus';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft, FileText, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { taxService } from '@/services/tax.service';
+import { TaxComplianceItem as TaxComplianceItemApi } from '@/types/api-contracts/tax.types';
 
-// Mock data for development
-const mockComplianceItems: TaxComplianceItem[] = [
-  {
-    id: '1',
-    name: 'Tax Registration',
-    description: 'KRA PIN registration and verification',
-    status: 'compliant',
-    lastUpdated: '2024-01-15T10:00:00Z',
-  },
-  {
-    id: '2',
-    name: 'Annual Filing',
-    description: '2023 annual tax return filing',
-    status: 'compliant',
-    lastUpdated: '2024-01-10T14:30:00Z',
-  },
-  {
-    id: '3',
-    name: 'Quarterly Filings',
-    description: 'Q4 2023 quarterly tax filing',
-    status: 'pending',
-    dueDate: '2024-02-28T23:59:59Z',
-    actionRequired: 'Submit Q4 2023 tax return by February 28, 2024',
-  },
-  {
-    id: '4',
-    name: 'Withholding Tax',
-    description: 'Withholding tax compliance for payments',
-    status: 'compliant',
-    lastUpdated: '2024-01-15T10:00:00Z',
-  },
-];
+function toUiComplianceItem(item: TaxComplianceItemApi): TaxComplianceItemUi {
+  return {
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    status: item.status === 'COMPLIANT' ? 'compliant' : 'pending',
+    dueDate: item.dueDate,
+    lastUpdated: item.lastUpdated,
+    actionRequired: item.actionRequired ? 'Action required to maintain compliance.' : undefined,
+  };
+}
 
 export default function TaxPage() {
   const router = useRouter();
   const [view, setView] = useState<'overview' | 'generate' | 'documents'>('overview');
+  const [items, setItems] = useState<TaxComplianceItemUi[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    taxService
+      .getComplianceStatus()
+      .then((res) => setItems(res.items.map(toUiComplianceItem)))
+      .catch(() => setError('Failed to load tax compliance status. Please try again.'))
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const overallStatus: 'compliant' | 'non-compliant' | 'partial' = items.length === 0
+    ? 'compliant'
+    : items.every(i => i.status === 'compliant')
+      ? 'compliant'
+      : items.some(i => i.status === 'compliant')
+        ? 'partial'
+        : 'non-compliant';
 
   const handleBack = () => {
     router.push('/dashboard/creative/wallet');
   };
 
-  const handleGenerateReport = (reportData: any) => {
-    console.log('Generating tax report:', reportData);
+  const handleGenerateReport = async (reportData: Omit<TaxReportData, 'reportId' | 'generatedAt'>) => {
+    try {
+      const result = await taxService.generateReport({ year: reportData.year, format: 'PDF' });
+      window.open(result.reportUrl, '_blank');
+    } catch (err) {
+      console.error('Failed to generate tax report:', err);
+      setError('Failed to generate tax report. Please try again.');
+    }
   };
 
   const handleUploadDocument = async (file: File) => {
-    console.log('Uploading document:', file.name);
+    await taxService.uploadDocument(file, 'OTHER');
   };
 
-  const handleRemoveDocument = (docId: string) => {
-    console.log('Removing document:', docId);
+  const handleRemoveDocument = async (docId: string) => {
+    try {
+      await taxService.deleteDocument(docId);
+    } catch (err) {
+      console.error('Failed to remove document:', err);
+    }
   };
 
   const handleComplianceAction = (itemId: string) => {
-    console.log('Taking action on compliance item:', itemId);
+    setView('documents');
   };
 
   return (
@@ -82,6 +92,12 @@ export default function TaxPage() {
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
       {/* View Toggle */}
       <div className="flex gap-2">
@@ -107,11 +123,18 @@ export default function TaxPage() {
 
       {/* Content */}
       {view === 'overview' && (
-        <TaxComplianceStatus
-          items={mockComplianceItems}
-          overallStatus="partial"
-          onAction={handleComplianceAction}
-        />
+        isLoading ? (
+          <div className="flex items-center justify-center py-16 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+            Loading compliance status...
+          </div>
+        ) : (
+          <TaxComplianceStatus
+            items={items}
+            overallStatus={overallStatus}
+            onAction={handleComplianceAction}
+          />
+        )
       )}
 
       {view === 'generate' && (

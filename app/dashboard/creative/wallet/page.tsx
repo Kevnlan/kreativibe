@@ -5,7 +5,6 @@ import { Wallet as WalletIcon, TrendingUp, TrendingDown, Download, Plus, ArrowUp
 import { Button, StatCard, DataTable, Card, CardContent, CardHeader, CardTitle, StatusBadge } from '@/components/ui';
 import { Wallet, Transaction } from '@/types/api-contracts/wallet.types';
 import { walletService } from '@/services/wallet.service';
-import { mockStore } from '@/lib/mock-data/mock-store';
 import { useUser } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -13,6 +12,7 @@ export default function WalletPage() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const user = useUser();
   const router = useRouter();
 
@@ -24,19 +24,16 @@ export default function WalletPage() {
 
   const loadWalletData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const [walletResponse, txResponse] = await Promise.all([
         walletService.getWalletBalance(),
         walletService.getTransactions({ limit: 10 }),
       ]);
-      setWallet(walletResponse as unknown as Wallet);
-      setTransactions((txResponse as any).transactions || (txResponse as any).data || []);
+      setWallet(walletResponse.wallet);
+      setTransactions(txResponse.transactions || []);
     } catch {
-      // Fall back to mock data when API is unavailable
-      const walletData = mockStore.getWallet(user!.id);
-      const transactionData = mockStore.getTransactions(user!.id);
-      setWallet(walletData);
-      setTransactions(transactionData.slice(0, 10));
+      setError('Failed to load wallet data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -157,6 +154,10 @@ export default function WalletPage() {
           {[1, 2, 3].map((i) => (
             <StatCard key={i} title="" value="" loading={true} />
           ))}
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
         </div>
       ) : wallet ? (
         <>

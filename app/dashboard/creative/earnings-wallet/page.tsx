@@ -16,24 +16,18 @@ import {
 } from 'lucide-react';
 import { Button, StatCard, DataTable, Card, CardContent, CardHeader, CardTitle, StatusBadge } from '@/components/ui';
 import { Wallet, Transaction } from '@/types/api-contracts/wallet.types';
-import { mockStore } from '@/lib/mock-data/mock-store';
+import { EarningsSummary } from '@/types/earnings.types';
+import { walletService } from '@/services/wallet.service';
+import { earningsService } from '@/services/earnings.service';
 import { useUser, useCreatorProfile } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-
-interface EarningsSummary {
-  thisMonth: number;
-  lastMonth: number;
-  thisYear: number;
-  totalSales: number;
-  averagePerSale: number;
-  currency: string;
-}
 
 export default function EarningsWalletPage() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [earnings, setEarnings] = useState<EarningsSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawMethod, setWithdrawMethod] = useState<'MPESA' | 'BANK'>('MPESA');
@@ -53,28 +47,19 @@ export default function EarningsWalletPage() {
 
   const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const walletData = mockStore.getWallet(user!.id);
-      const transactionData = mockStore.getTransactions(user!.id);
-      setWallet(walletData);
-      setTransactions(transactionData.slice(0, 10));
-
-      const creditTransactions = transactionData.filter(
-        (t) => t.type === 'CREDIT' && t.status === 'COMPLETED'
-      );
-      const totalSales = creditTransactions.length;
-      const totalEarnings = creditTransactions.reduce((sum, t) => sum + t.amount, 0);
-
-      setEarnings({
-        thisMonth: totalEarnings * 0.3,
-        lastMonth: totalEarnings * 0.25,
-        thisYear: totalEarnings,
-        totalSales,
-        averagePerSale: totalSales > 0 ? totalEarnings / totalSales : 0,
-        currency: walletData.currency,
-      });
-    } catch (error) {
-      console.error('Failed to load data:', error);
+      const [walletResponse, txResponse, summary] = await Promise.all([
+        walletService.getWalletBalance(),
+        walletService.getTransactions({ limit: 10 }),
+        earningsService.getSummary(),
+      ]);
+      setWallet(walletResponse.wallet);
+      setTransactions(txResponse.transactions || []);
+      setEarnings(summary);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+      setError('Failed to load earnings data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -264,6 +249,10 @@ export default function EarningsWalletPage() {
             <StatCard key={i} title="" value="" loading={true} />
           ))}
         </div>
+      ) : error ? (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -312,28 +301,28 @@ export default function EarningsWalletPage() {
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div>
                       <p className="text-sm font-medium">Content Sales</p>
-                      <p className="text-xs text-muted-foreground">{earnings?.totalSales || 0} sales</p>
+                      <p className="text-xs text-muted-foreground">{earnings?.breakdown.contentSales.percent ?? 0}%</p>
                     </div>
                     <p className="font-semibold">
-                      {earnings ? formatCurrency(earnings.thisYear * 0.8, earnings.currency) : 'KES 0'}
+                      {formatCurrency(earnings?.breakdown.contentSales.amount ?? 0, earnings?.currency)}
                     </p>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div>
                       <p className="text-sm font-medium">Custom Requests</p>
-                      <p className="text-xs text-muted-foreground">3 projects</p>
+                      <p className="text-xs text-muted-foreground">{earnings?.breakdown.customRequests.percent ?? 0}%</p>
                     </div>
                     <p className="font-semibold">
-                      {earnings ? formatCurrency(earnings.thisYear * 0.15, earnings.currency) : 'KES 0'}
+                      {formatCurrency(earnings?.breakdown.customRequests.amount ?? 0, earnings?.currency)}
                     </p>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div>
                       <p className="text-sm font-medium">Bonuses</p>
-                      <p className="text-xs text-muted-foreground">Performance rewards</p>
+                      <p className="text-xs text-muted-foreground">{earnings?.breakdown.bonuses.percent ?? 0}%</p>
                     </div>
                     <p className="font-semibold">
-                      {earnings ? formatCurrency(earnings.thisYear * 0.05, earnings.currency) : 'KES 0'}
+                      {formatCurrency(earnings?.breakdown.bonuses.amount ?? 0, earnings?.currency)}
                     </p>
                   </div>
                 </div>
@@ -345,24 +334,24 @@ export default function EarningsWalletPage() {
                 <CardTitle>Top Performing Content</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {[
-                    { name: 'Summer Fashion Collection', sales: 12, amount: 15000 },
-                    { name: 'Product Photography Set', sales: 8, amount: 10000 },
-                    { name: 'Social Media Templates', sales: 15, amount: 7500 },
-                  ].map((item) => (
-                    <div key={item.name} className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-muted rounded-lg flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">{item.sales} sales</p>
+                {earnings?.topPerformingContent && earnings.topPerformingContent.length > 0 ? (
+                  <div className="space-y-3">
+                    {earnings.topPerformingContent.map((item) => (
+                      <div key={item.contentId} className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-muted rounded-lg flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{item.title}</p>
+                          <p className="text-xs text-muted-foreground">{item.salesCount} sales</p>
+                        </div>
+                        <p className="font-semibold text-sm">
+                          {formatCurrency(item.revenue, earnings?.currency || 'KES')}
+                        </p>
                       </div>
-                      <p className="font-semibold text-sm">
-                        {formatCurrency(item.amount, earnings?.currency || 'KES')}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">No content sales yet.</p>
+                )}
               </CardContent>
             </Card>
           </div>

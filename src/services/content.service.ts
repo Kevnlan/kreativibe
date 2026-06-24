@@ -21,7 +21,7 @@ export const contentService = {
   },
 
   async getContentById(id: string): Promise<Content> {
-    return apiClient.post(`/contents/${id}/get`, {});
+    return apiClient.post('/contents/get', { id });
   },
 
   async createContent(data: CreateContentData): Promise<Content> {
@@ -29,19 +29,19 @@ export const contentService = {
   },
 
   async updateContent(id: string, data: UpdateContentData): Promise<Content> {
-    return apiClient.post(`/contents/${id}/update`, data);
+    return apiClient.post('/contents/update', { id, ...data });
   },
 
   async deleteContent(id: string): Promise<void> {
-    return apiClient.post(`/contents/${id}/delete`, {});
+    return apiClient.post('/contents/delete', { id });
   },
 
   async duplicateContent(id: string): Promise<Content> {
-    return apiClient.post(`/contents/${id}/duplicate`, {});
+    return apiClient.post('/contents/duplicate', { id });
   },
 
   async getContentVersions(id: string): Promise<{ versions: ContentVersion[] }> {
-    return apiClient.post(`/contents/${id}/versions/list`, {});
+    return apiClient.post('/contents/versions/list', { id });
   },
 
   async adviseContentStrategy(data: ContentAdviceRequest): Promise<ContentAdviceResponse> {

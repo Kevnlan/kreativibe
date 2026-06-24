@@ -1,118 +1,158 @@
 'use client';
 
-import { useState } from 'react';
-import { PostScheduler, ScheduledPost } from '@/components/content/PostScheduler';
+import { useState, useEffect, useCallback } from 'react';
+import { PostScheduler, ScheduledPost as UiScheduledPost } from '@/components/content/PostScheduler';
 import { ContentQueue, PostPreviewData } from '@/components/content/ContentQueue';
 import { PlatformIntegrations, PlatformIntegration } from '@/components/content/PlatformIntegrations';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar } from 'lucide-react';
+import { ArrowLeft, Calendar, Loader2 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
+import { schedulingService } from '@/services/scheduling.service';
+import { socialService } from '@/services/social.service';
+import { ScheduledPost as ApiScheduledPost, ScheduledPostPlatform, ScheduledPostStatus } from '@/types/api-contracts/scheduling.types';
+import { SocialAccount, SocialPlatform } from '@/types/api-contracts/social.types';
 
-// Mock data for development
-const mockScheduledPosts: ScheduledPost[] = [
-  {
-    id: 'p1',
-    title: 'Summer Fashion Lookbook',
-    platform: 'instagram',
-    scheduledDate: '2024-06-15',
-    scheduledTime: '10:00',
-    status: 'scheduled',
-    content: 'Check out our summer fashion collection! ☀️ #SummerFashion #OOTD',
-    media: ['/placeholder1.jpg', '/placeholder2.jpg'],
-    campaignId: '1',
-  },
-  {
-    id: 'p2',
-    title: 'Product Reveal Video',
-    platform: 'tiktok',
-    scheduledDate: '2024-06-16',
-    scheduledTime: '14:00',
-    status: 'scheduled',
-    content: 'New product drop! Watch till the end 🎬 #NewProduct #Drop',
-    media: ['/placeholder3.mp4'],
-    campaignId: '1',
-  },
-  {
-    id: 'p3',
-    title: 'Behind the Scenes',
-    platform: 'youtube',
-    scheduledDate: '2024-06-10',
-    scheduledTime: '18:00',
-    status: 'published',
-    content: 'Behind the scenes of our latest campaign shoot',
-    media: ['/placeholder4.mp4'],
-    campaignId: '1',
-  },
-];
+// UI components use lowercase platform/status values; the API uses uppercase.
+const platformToUi: Record<ScheduledPostPlatform, UiScheduledPost['platform']> = {
+  INSTAGRAM: 'instagram',
+  TIKTOK: 'tiktok',
+  YOUTUBE: 'youtube',
+  FACEBOOK: 'facebook',
+};
 
-const mockIntegrations: PlatformIntegration[] = [
-  {
-    id: 'ig',
-    platform: 'instagram',
-    name: 'Instagram Business',
-    status: 'connected',
-    lastSync: '2024-01-15T10:00:00Z',
-    accountName: 'Fashion Brand Kenya',
-    accountHandle: '@fashionbrandke',
-    followerCount: 15000,
-  },
-  {
-    id: 'tt',
-    platform: 'tiktok',
-    name: 'TikTok Business',
-    status: 'connected',
-    lastSync: '2024-01-15T09:30:00Z',
-    accountName: 'Fashion Brand Kenya',
-    accountHandle: '@fashionbrandke',
-    followerCount: 25000,
-  },
-  {
-    id: 'yt',
-    platform: 'youtube',
-    name: 'YouTube Channel',
-    status: 'disconnected',
-  },
-  {
-    id: 'fb',
-    platform: 'facebook',
-    name: 'Facebook Page',
-    status: 'error',
-    errorMessage: 'API key expired',
-  },
-];
+const platformToApi: Record<UiScheduledPost['platform'], ScheduledPostPlatform> = {
+  instagram: 'INSTAGRAM',
+  tiktok: 'TIKTOK',
+  youtube: 'YOUTUBE',
+  twitter: 'FACEBOOK', // not supported by the API; falls back to Facebook
+  facebook: 'FACEBOOK',
+};
+
+const statusToUi: Record<ScheduledPostStatus, UiScheduledPost['status']> = {
+  SCHEDULED: 'scheduled',
+  PUBLISHED: 'published',
+  FAILED: 'failed',
+};
+
+function toUiPost(post: ApiScheduledPost): UiScheduledPost {
+  return {
+    id: post.id,
+    title: post.title,
+    platform: platformToUi[post.platform],
+    scheduledDate: post.scheduledDate,
+    scheduledTime: post.scheduledTime,
+    status: statusToUi[post.status],
+    content: post.content,
+    media: post.media,
+    campaignId: post.campaignId,
+  };
+}
+
+const socialPlatformToUi: Record<SocialPlatform, PlatformIntegration['platform'] | null> = {
+  INSTAGRAM: 'instagram',
+  TIKTOK: 'tiktok',
+  YOUTUBE: 'youtube',
+  FACEBOOK: 'facebook',
+  TWITTER: 'twitter',
+};
+
+function toIntegration(account: SocialAccount): PlatformIntegration {
+  return {
+    id: account.id,
+    platform: socialPlatformToUi[account.platform] ?? 'instagram',
+    name: `${account.platform.charAt(0)}${account.platform.slice(1).toLowerCase()} Account`,
+    status: account.isActive ? 'connected' : 'disconnected',
+    lastSync: account.lastSyncedAt,
+    accountName: account.displayName,
+    accountHandle: account.username ? `@${account.username}` : undefined,
+  };
+}
 
 export default function SchedulePage() {
   const router = useRouter();
   const params = useParams();
+  const campaignId = params.id as string;
   const [view, setView] = useState<'calendar' | 'queue' | 'integrations'>('calendar');
-  const [posts, setPosts] = useState<ScheduledPost[]>(mockScheduledPosts);
+  const [posts, setPosts] = useState<UiScheduledPost[]>([]);
+  const [integrations, setIntegrations] = useState<PlatformIntegration[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = useCallback(() => {
+    setIsLoading(true);
+    setError(null);
+    Promise.all([
+      schedulingService.listScheduledPosts(campaignId),
+      socialService.getAccounts(),
+    ])
+      .then(([postsRes, accountsRes]) => {
+        setPosts(postsRes.posts.map(toUiPost));
+        setIntegrations(accountsRes.accounts.map(toIntegration));
+      })
+      .catch(() => setError('Failed to load scheduling data. Please try again.'))
+      .finally(() => setIsLoading(false));
+  }, [campaignId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleBack = () => {
-    router.push(`/dashboard/creative/campaigns/${params.id}`);
+    router.push(`/dashboard/creative/campaigns/${campaignId}`);
   };
 
-  const handleAddPost = (post: Omit<ScheduledPost, 'id'>) => {
-    const newPost: ScheduledPost = {
-      ...post,
-      id: Date.now().toString(),
-    };
-    setPosts([...posts, newPost]);
+  const handleAddPost = async (post: Omit<UiScheduledPost, 'id'>) => {
+    try {
+      const created = await schedulingService.createScheduledPost(campaignId, {
+        title: post.title,
+        platform: platformToApi[post.platform],
+        scheduledDate: post.scheduledDate,
+        scheduledTime: post.scheduledTime,
+        content: post.content,
+        media: post.media ?? [],
+      });
+      setPosts(prev => [...prev, toUiPost(created)]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create post.');
+    }
   };
 
-  const handleEditPost = (id: string, updatedPost: Partial<ScheduledPost>) => {
-    setPosts(posts.map(p => p.id === id ? { ...p, ...updatedPost } : p));
+  const handleEditPost = async (id: string, updatedPost: Partial<UiScheduledPost>) => {
+    try {
+      const updated = await schedulingService.updateScheduledPost(campaignId, id, {
+        ...(updatedPost.title !== undefined && { title: updatedPost.title }),
+        ...(updatedPost.platform !== undefined && { platform: platformToApi[updatedPost.platform] }),
+        ...(updatedPost.scheduledDate !== undefined && { scheduledDate: updatedPost.scheduledDate }),
+        ...(updatedPost.scheduledTime !== undefined && { scheduledTime: updatedPost.scheduledTime }),
+        ...(updatedPost.content !== undefined && { content: updatedPost.content }),
+        ...(updatedPost.media !== undefined && { media: updatedPost.media }),
+      });
+      setPosts(prev => prev.map(p => (p.id === id ? toUiPost(updated) : p)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update post.');
+    }
   };
 
-  const handleDeletePost = (id: string) => {
-    setPosts(posts.filter(p => p.id !== id));
+  const handleDeletePost = async (id: string) => {
+    try {
+      await schedulingService.deleteScheduledPost(campaignId, id);
+      setPosts(prev => prev.filter(p => p.id !== id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete post.');
+    }
   };
 
-  const handlePublishNow = (id: string) => {
-    setPosts(posts.map(p => p.id === id ? { ...p, status: 'published' } : p));
+  const handlePublishNow = async (id: string) => {
+    try {
+      const published = await schedulingService.publishNow(campaignId, id);
+      setPosts(prev => prev.map(p => (p.id === id ? toUiPost(published) : p)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to publish post.');
+    }
   };
 
   // Convert ScheduledPost to PostPreviewData for ContentQueue
-  const postsAsPreviewData = posts.map(p => ({
+  const postsAsPreviewData: PostPreviewData[] = posts.map(p => ({
     id: p.id,
     title: p.title,
     content: p.content,
@@ -123,16 +163,37 @@ export default function SchedulePage() {
     status: p.status,
   }));
 
-  const handleConnect = (platformId: string) => {
-    console.log('Connecting platform:', platformId);
+  const handleConnect = async (platformId: string) => {
+    try {
+      const apiPlatform = (Object.entries(socialPlatformToUi).find(([, ui]) => ui === platformId)?.[0] ??
+        'INSTAGRAM') as SocialPlatform;
+      await socialService.connectAccount({
+        platform: apiPlatform,
+        redirectUrl: typeof window !== 'undefined' ? window.location.href : '',
+      });
+      // OAuth is stubbed server-side; refresh the list once the flow completes elsewhere.
+      loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to connect platform.');
+    }
   };
 
-  const handleDisconnect = (platformId: string) => {
-    console.log('Disconnecting platform:', platformId);
+  const handleDisconnect = async (platformId: string) => {
+    try {
+      await socialService.disconnectAccount(platformId);
+      setIntegrations(prev => prev.filter(i => i.id !== platformId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to disconnect platform.');
+    }
   };
 
-  const handleSync = (platformId: string) => {
-    console.log('Syncing platform:', platformId);
+  const handleSync = async (platformId: string) => {
+    try {
+      const synced = await socialService.syncAccount(platformId);
+      setIntegrations(prev => prev.map(i => (i.id === platformId ? toIntegration(synced) : i)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to sync platform.');
+    }
   };
 
   const handleSettings = (platformId: string) => {
@@ -151,11 +212,17 @@ export default function SchedulePage() {
             <Calendar className="h-6 w-6 text-brand-blue" />
             <div>
               <h1 className="text-2xl font-bold">Post Scheduling</h1>
-              <p className="text-muted-foreground">Campaign ID: {params.id}</p>
+              <p className="text-muted-foreground">Campaign ID: {campaignId}</p>
             </div>
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
       {/* View Toggle */}
       <div className="flex gap-2">
@@ -181,33 +248,48 @@ export default function SchedulePage() {
       </div>
 
       {/* Content */}
-      {view === 'calendar' && (
-        <PostScheduler
-          posts={posts}
-          onAddPost={handleAddPost}
-          onEditPost={handleEditPost}
-          onDeletePost={handleDeletePost}
-          onPublishNow={handlePublishNow}
-        />
-      )}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          Loading scheduling data...
+        </div>
+      ) : (
+        <>
+          {view === 'calendar' && (
+            <PostScheduler
+              posts={posts}
+              onAddPost={handleAddPost}
+              onEditPost={handleEditPost}
+              onDeletePost={handleDeletePost}
+              onPublishNow={handlePublishNow}
+            />
+          )}
 
-      {view === 'queue' && (
-        <ContentQueue
-          posts={postsAsPreviewData}
-          onEdit={(id) => handleEditPost(id, {})}
-          onDelete={handleDeletePost}
-          onPublishNow={handlePublishNow}
-        />
-      )}
+          {view === 'queue' && (
+            <ContentQueue
+              posts={postsAsPreviewData}
+              onEdit={(id) => handleEditPost(id, {})}
+              onDelete={handleDeletePost}
+              onPublishNow={handlePublishNow}
+            />
+          )}
 
-      {view === 'integrations' && (
-        <PlatformIntegrations
-          integrations={mockIntegrations}
-          onConnect={handleConnect}
-          onDisconnect={handleDisconnect}
-          onSync={handleSync}
-          onSettings={handleSettings}
-        />
+          {view === 'integrations' && (
+            integrations.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground">
+                No social accounts connected yet.
+              </div>
+            ) : (
+              <PlatformIntegrations
+                integrations={integrations}
+                onConnect={handleConnect}
+                onDisconnect={handleDisconnect}
+                onSync={handleSync}
+                onSettings={handleSettings}
+              />
+            )
+          )}
+        </>
       )}
     </div>
   );
