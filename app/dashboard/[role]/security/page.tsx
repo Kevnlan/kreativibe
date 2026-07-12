@@ -1,23 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TwoFactorAuth, TwoFactorAuthData } from '@/components/auth/TwoFactorAuth';
 import { SecuritySettings, SecuritySetting } from '@/components/auth/SecuritySettings';
 import { CountryConfig, CountryConfig as CountryConfigType } from '@/components/auth/CountryConfig';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Shield } from 'lucide-react';
+import { ArrowLeft, Shield, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { twoFactorService } from '@/services/2fa.service';
+import { countryService } from '@/services/country.service';
+import { Country } from '@/types/api-contracts/country.types';
 
-// Mock data for development
-const mockTwoFactorData: TwoFactorAuthData = {
-  enabled: false,
-  method: 'sms',
-  phoneNumber: '+254 700 000 000',
-  email: 'user@example.com',
-  backupCodes: [],
-};
-
-const mockSecuritySettings: SecuritySetting[] = [
+const defaultSecuritySettings: SecuritySetting[] = [
   {
     id: 'password_length',
     name: 'Minimum Password Length',
@@ -50,75 +44,146 @@ const mockSecuritySettings: SecuritySetting[] = [
   },
 ];
 
-const mockCountryConfig: CountryConfigType[] = [
-  {
-    id: 'kenya',
-    name: 'Kenya',
-    code: 'KE',
-    currency: 'KES',
-    taxRate: 3,
-    payoutMethods: ['MPESA', 'BANK_TRANSFER'],
-    enabled: true,
-  },
-  {
-    id: 'uganda',
-    name: 'Uganda',
-    code: 'UG',
-    currency: 'UGX',
-    taxRate: 6,
-    payoutMethods: ['MTN_MOBILE_MONEY', 'BANK_TRANSFER'],
-    enabled: true,
-  },
-  {
-    id: 'tanzania',
-    name: 'Tanzania',
-    code: 'TZ',
-    currency: 'TZS',
-    taxRate: 5,
-    payoutMethods: ['VODACOM_MPESA', 'BANK_TRANSFER'],
-    enabled: false,
-  },
-];
+function mapCountryToConfig(c: Country): CountryConfigType {
+  return {
+    id: c.id,
+    name: c.name,
+    code: c.code,
+    currency: c.currency,
+    taxRate: c.taxRate,
+    payoutMethods: c.config?.payoutMethods?.map(p => p.type) ?? [],
+    enabled: c.isActive,
+  };
+}
 
 export default function SecurityPage() {
   const router = useRouter();
   const [view, setView] = useState<'2fa' | 'security' | 'countries'>('2fa');
+  const [twoFactorData, setTwoFactorData] = useState<TwoFactorAuthData>({
+    enabled: false,
+    method: 'authenticator',
+  });
+  const [countries, setCountries] = useState<CountryConfigType[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const status = await twoFactorService.getStatus();
+      setTwoFactorData({
+        enabled: status.enabled,
+        method: 'authenticator',
+        backupCodes: [],
+      });
+    } catch (error) {
+      console.error('Failed to load 2FA status:', error);
+    }
+    try {
+      const response = await countryService.getCountries();
+      setCountries((response.countries || []).map(mapCountryToConfig));
+    } catch (error) {
+      console.error('Failed to load countries:', error);
+    }
+    setLoading(false);
+  };
 
   const handleBack = () => {
     router.back();
   };
 
-  const handleEnable2FA = (method: 'sms' | 'email' | 'authenticator') => {
-    console.log('Enabling 2FA with method:', method);
+  const handleEnable2FA = async (method: 'sms' | 'email' | 'authenticator') => {
+    try {
+      await twoFactorService.setup();
+      setTwoFactorData(prev => ({ ...prev, enabled: true, method }));
+    } catch (error) {
+      console.error('Failed to enable 2FA:', error);
+    }
   };
 
-  const handleDisable2FA = () => {
-    console.log('Disabling 2FA');
+  const handleDisable2FA = async () => {
+    try {
+      await twoFactorService.disable({ password: '', code: '' });
+      setTwoFactorData(prev => ({ ...prev, enabled: false }));
+    } catch (error) {
+      console.error('Failed to disable 2FA:', error);
+    }
   };
 
-  const handleGenerateBackupCodes = () => {
-    console.log('Generating backup codes');
+  const handleGenerateBackupCodes = async () => {
+    try {
+      const response = await twoFactorService.regenerateBackupCodes();
+      setTwoFactorData(prev => ({ ...prev, backupCodes: response.backupCodes }));
+    } catch (error) {
+      console.error('Failed to generate backup codes:', error);
+    }
   };
 
   const handleChange2FAMethod = (method: 'sms' | 'email' | 'authenticator') => {
-    console.log('Changing 2FA method to:', method);
+    setTwoFactorData(prev => ({ ...prev, method }));
   };
 
   const handleSaveSecuritySettings = (settings: SecuritySetting[]) => {
     console.log('Saving security settings:', settings);
   };
 
-  const handleAddCountry = (country: Omit<CountryConfigType, 'id'>) => {
-    console.log('Adding country:', country);
+  const handleAddCountry = async (country: Omit<CountryConfigType, 'id'>) => {
+    try {
+      await countryService.createCountry({
+        name: country.name,
+        code: country.code,
+        currency: country.currency,
+        taxRate: country.taxRate,
+        config: {
+          kycRules: [],
+          payoutMethods: [],
+          taxRules: [],
+          currencies: [country.currency],
+          minWithdrawalAmount: 0,
+          maxWithdrawalAmount: 0,
+        },
+      });
+      loadData();
+    } catch (error) {
+      console.error('Failed to add country:', error);
+    }
   };
 
-  const handleUpdateCountry = (countryId: string, updates: Partial<CountryConfigType>) => {
-    console.log('Updating country:', countryId, updates);
+  const handleUpdateCountry = async (countryId: string, updates: Partial<CountryConfigType>) => {
+    try {
+      await countryService.updateCountry(countryId, {
+        name: updates.name,
+        code: updates.code,
+        currency: updates.currency,
+        taxRate: updates.taxRate,
+        isActive: updates.enabled,
+      });
+      loadData();
+    } catch (error) {
+      console.error('Failed to update country:', error);
+    }
   };
 
-  const handleDeleteCountry = (countryId: string) => {
-    console.log('Deleting country:', countryId);
+  const handleDeleteCountry = async (countryId: string) => {
+    try {
+      await countryService.deleteCountry(countryId);
+      loadData();
+    } catch (error) {
+      console.error('Failed to delete country:', error);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6 flex items-center justify-center py-16 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+        Loading security settings...
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -163,7 +228,7 @@ export default function SecurityPage() {
       {/* Content */}
       {view === '2fa' && (
         <TwoFactorAuth
-          data={mockTwoFactorData}
+          data={twoFactorData}
           onEnable={handleEnable2FA}
           onDisable={handleDisable2FA}
           onGenerateBackupCodes={handleGenerateBackupCodes}
@@ -173,14 +238,14 @@ export default function SecurityPage() {
 
       {view === 'security' && (
         <SecuritySettings
-          settings={mockSecuritySettings}
+          settings={defaultSecuritySettings}
           onSave={handleSaveSecuritySettings}
         />
       )}
 
       {view === 'countries' && (
         <CountryConfig
-          countries={mockCountryConfig}
+          countries={countries}
           onAdd={handleAddCountry}
           onUpdate={handleUpdateCountry}
           onDelete={handleDeleteCountry}

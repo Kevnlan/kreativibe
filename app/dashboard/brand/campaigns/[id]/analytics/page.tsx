@@ -1,93 +1,48 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CampaignOverview, CampaignOverviewData } from '@/components/analytics/CampaignOverview';
 import { CreativePerformance, CreativePerformanceData } from '@/components/analytics/CreativePerformance';
 import { ContentPerformanceChart, ContentPerformanceData } from '@/components/analytics/ContentPerformanceChart';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, BarChart3 } from 'lucide-react';
+import { ArrowLeft, BarChart3, Loader2 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
-
-// Mock data for development
-const mockCampaignOverview: CampaignOverviewData = {
-  campaignId: '1',
-  campaignName: 'Summer Fashion Campaign 2024',
-  status: 'active',
-  startDate: '2024-06-01',
-  endDate: '2024-08-31',
-  budget: 500000,
-  spent: 325000,
-  currency: 'KES',
-  metrics: {
-    totalReach: 2500000,
-    totalEngagement: 450000,
-    totalImpressions: 5000000,
-    clickThroughRate: 3.5,
-    conversionRate: 2.1,
-  },
-  creatives: 15,
-  posts: 120,
-};
-
-const mockCreativePerformance: CreativePerformanceData[] = [
-  {
-    creativeId: 'c1',
-    name: 'Sarah Mwangi',
-    metrics: {
-      posts: 12,
-      totalReach: 350000,
-      totalEngagement: 75000,
-      engagementRate: 21.4,
-      avgViews: 29167,
-      earnings: 125000,
-    },
-    trend: 15.3,
-  },
-  {
-    creativeId: 'c2',
-    name: 'John Kamau',
-    metrics: {
-      posts: 8,
-      totalReach: 280000,
-      totalEngagement: 52000,
-      engagementRate: 18.6,
-      avgViews: 35000,
-      earnings: 95000,
-    },
-    trend: 8.7,
-  },
-  {
-    creativeId: 'c3',
-    name: 'Mary Wanjiku',
-    metrics: {
-      posts: 15,
-      totalReach: 420000,
-      totalEngagement: 98000,
-      engagementRate: 23.3,
-      avgViews: 28000,
-      earnings: 145000,
-    },
-    trend: 22.1,
-  },
-];
-
-const mockContentPerformance: ContentPerformanceData[] = [
-  { date: '2024-06-01', views: 50000, engagement: 8500, shares: 1200, comments: 3400 },
-  { date: '2024-06-02', views: 62000, engagement: 10500, shares: 1500, comments: 4200 },
-  { date: '2024-06-03', views: 58000, engagement: 9800, shares: 1350, comments: 3900 },
-  { date: '2024-06-04', views: 75000, engagement: 12800, shares: 1800, comments: 5100 },
-  { date: '2024-06-05', views: 68000, engagement: 11500, shares: 1600, comments: 4600 },
-  { date: '2024-06-06', views: 82000, engagement: 13900, shares: 1950, comments: 5500 },
-  { date: '2024-06-07', views: 79000, engagement: 13400, shares: 1880, comments: 5300 },
-];
+import { campaignService } from '@/services/campaign.service';
+import { Campaign, CampaignStats } from '@/types/campaign.types';
 
 export default function CampaignAnalyticsPage() {
   const router = useRouter();
   const params = useParams();
+  const campaignId = params.id as string;
   const [metric, setMetric] = useState<'views' | 'engagement' | 'shares' | 'comments'>('views');
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [stats, setStats] = useState<CampaignStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadAnalytics();
+  }, [campaignId]);
+
+  const loadAnalytics = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [campaignData, statsData] = await Promise.all([
+        campaignService.get(campaignId),
+        campaignService.stats(campaignId),
+      ]);
+      setCampaign(campaignData);
+      setStats(statsData);
+    } catch {
+      setError('Failed to load campaign analytics. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleBack = () => {
-    router.push(`/dashboard/brand/campaigns/${params.id}`);
+    router.push(`/dashboard/brand/campaigns/${campaignId}`);
   };
 
   const handleExport = () => {
@@ -102,6 +57,62 @@ export default function CampaignAnalyticsPage() {
     console.log('Viewing details for creative:', creativeId);
   };
 
+  const campaignOverview: CampaignOverviewData | null = campaign ? {
+    campaignId: campaign.id,
+    campaignName: campaign.title,
+    status: campaign.status.toLowerCase(),
+    startDate: campaign.startDate || '',
+    endDate: campaign.endDate || '',
+    budget: campaign.budgetMax,
+    spent: 0,
+    currency: campaign.currency,
+    metrics: {
+      totalReach: 0,
+      totalEngagement: 0,
+      totalImpressions: 0,
+      clickThroughRate: 0,
+      conversionRate: 0,
+    },
+    creatives: stats?.acceptedCreators ?? 0,
+    posts: 0,
+  } : null;
+
+  const creativePerformance: CreativePerformanceData[] = [];
+  const contentPerformance: ContentPerformanceData[] = [];
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          Loading campaign analytics...
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !campaignOverview) {
+    return (
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" onClick={handleBack} leftIcon={<ArrowLeft className="h-4 w-4" />}>
+            Back
+          </Button>
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-6 w-6 text-brand-blue" />
+            <div>
+              <h1 className="text-2xl font-bold">Campaign Analytics</h1>
+              <p className="text-muted-foreground">Campaign ID: {campaignId}</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error || 'Failed to load campaign data.'}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
@@ -114,7 +125,7 @@ export default function CampaignAnalyticsPage() {
             <BarChart3 className="h-6 w-6 text-brand-blue" />
             <div>
               <h1 className="text-2xl font-bold">Campaign Analytics</h1>
-              <p className="text-muted-foreground">Campaign ID: {params.id}</p>
+              <p className="text-muted-foreground">Campaign ID: {campaignId}</p>
             </div>
           </div>
         </div>
@@ -125,7 +136,7 @@ export default function CampaignAnalyticsPage() {
         {/* Campaign Overview */}
         <div className="lg:col-span-2">
           <CampaignOverview
-            campaign={mockCampaignOverview}
+            campaign={campaignOverview}
             onExport={handleExport}
           />
         </div>
@@ -133,7 +144,7 @@ export default function CampaignAnalyticsPage() {
         {/* Content Performance Chart */}
         <div className="lg:col-span-2">
           <ContentPerformanceChart
-            data={mockContentPerformance}
+            data={contentPerformance}
             metric={metric}
             onMetricChange={setMetric}
             onExport={handleExport}
@@ -143,7 +154,7 @@ export default function CampaignAnalyticsPage() {
         {/* Creative Performance */}
         <div className="lg:col-span-2">
           <CreativePerformance
-            creatives={mockCreativePerformance}
+            creatives={creativePerformance}
             onSort={handleSort}
             onViewDetails={handleViewDetails}
           />

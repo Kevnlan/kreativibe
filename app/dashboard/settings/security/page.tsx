@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Shield, Smartphone, Key, Download, RefreshCw } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, CardTitle, StatusBadge } from '@/components/ui';
 import { TwoFactorStatus } from '@/types/api-contracts/2fa.types';
+import { twoFactorService } from '@/services/2fa.service';
 import { useRouter } from 'next/navigation';
 
 export default function SecuritySettingsPage() {
@@ -20,11 +21,8 @@ export default function SecuritySettingsPage() {
   const loadTwoFactorStatus = async () => {
     setLoading(true);
     try {
-      // Mock data - replace with actual API call
-      setTwoFactorStatus({
-        enabled: false,
-        backupCodesRemaining: 0,
-      });
+      const status = await twoFactorService.getStatus();
+      setTwoFactorStatus(status);
     } catch (error) {
       console.error('Failed to load 2FA status:', error);
     } finally {

@@ -1,103 +1,79 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Instagram, Facebook, Youtube, Twitter, Linkedin, Link2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Instagram, Facebook, Youtube, Twitter, Linkedin, Link2, CheckCircle, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, CardTitle, StatusBadge } from '@/components/ui';
+import { socialService } from '@/services/social.service';
+import { SocialAccount, SocialPlatform } from '@/types/api-contracts/social.types';
 
-interface SocialAccount {
-  id: string;
-  platform: 'INSTAGRAM' | 'FACEBOOK' | 'YOUTUBE' | 'TWITTER' | 'LINKEDIN';
-  username: string;
-  isConnected: boolean;
-  followers?: number;
-  connectedAt?: string;
-  lastSync?: string;
-  permissions: string[];
-}
+const ALL_PLATFORMS: SocialPlatform[] = ['INSTAGRAM', 'FACEBOOK', 'YOUTUBE', 'TWITTER', 'LINKEDIN'];
 
 export default function SocialMediaPage() {
   const [accounts, setAccounts] = useState<SocialAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadAccounts();
-  }, []);
-
-  const loadAccounts = async () => {
+  const loadAccounts = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Mock data
-      const mockAccounts: SocialAccount[] = [
-        {
-          id: '1',
-          platform: 'INSTAGRAM',
-          username: '@mybrand',
-          isConnected: true,
-          followers: 15000,
-          connectedAt: '2024-03-01T10:00:00Z',
-          lastSync: '2024-03-18T14:00:00Z',
-          permissions: ['publish_content', 'read_insights'],
-        },
-        {
-          id: '2',
-          platform: 'FACEBOOK',
-          username: 'My Brand Page',
-          isConnected: true,
-          followers: 8500,
-          connectedAt: '2024-03-05T12:00:00Z',
-          lastSync: '2024-03-18T14:00:00Z',
-          permissions: ['publish_content', 'read_insights'],
-        },
-        {
-          id: '3',
-          platform: 'YOUTUBE',
-          username: 'MyBrandChannel',
-          isConnected: false,
-          permissions: [],
-        },
-        {
-          id: '4',
-          platform: 'TWITTER',
-          username: '',
-          isConnected: false,
-          permissions: [],
-        },
-        {
-          id: '5',
-          platform: 'LINKEDIN',
-          username: '',
-          isConnected: false,
-          permissions: [],
-        },
-      ];
-      setAccounts(mockAccounts);
-    } catch (error) {
-      console.error('Failed to load accounts:', error);
+      const response = await socialService.getAccounts();
+      setAccounts(response.accounts || []);
+    } catch {
+      setError('Failed to load social accounts. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleConnect = async (platform: string) => {
-    // Mock OAuth flow
-    alert(`Redirecting to ${platform} for authorization...`);
-    // In real implementation, this would redirect to OAuth URL
+  useEffect(() => {
+    loadAccounts();
+  }, [loadAccounts]);
+
+  const handleConnect = async (platform: SocialPlatform) => {
+    setActionLoading(platform);
+    try {
+      const { authUrl } = await socialService.connectAccount({
+        platform,
+        redirectUrl: typeof window !== 'undefined' ? window.location.href : '',
+      });
+      if (authUrl) {
+        window.location.href = authUrl;
+      }
+    } catch {
+      setError(`Failed to connect ${platform}. Please try again.`);
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleDisconnect = async (accountId: string) => {
-    if (confirm('Are you sure you want to disconnect this account?')) {
-      setAccounts(accounts.map(acc => 
-        acc.id === accountId ? { ...acc, isConnected: false, username: '', followers: undefined } : acc
-      ));
+    if (!confirm('Are you sure you want to disconnect this account?')) return;
+    setActionLoading(accountId);
+    try {
+      await socialService.disconnectAccount(accountId);
+      setAccounts(prev => prev.filter(a => a.id !== accountId));
+    } catch {
+      setError('Failed to disconnect account. Please try again.');
+    } finally {
+      setActionLoading(null);
     }
   };
 
   const handleRefresh = async (accountId: string) => {
-    alert('Refreshing account data...');
-    // Mock refresh
+    setActionLoading(accountId);
+    try {
+      const synced = await socialService.syncAccount(accountId);
+      setAccounts(prev => prev.map(a => (a.id === accountId ? synced : a)));
+    } catch {
+      setError('Failed to sync account. Please try again.');
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const getPlatformIcon = (platform: SocialAccount['platform']) => {
+  const getPlatformIcon = (platform: SocialPlatform) => {
     switch (platform) {
       case 'INSTAGRAM':
         return <Instagram className="h-5 w-5" />;
@@ -112,7 +88,7 @@ export default function SocialMediaPage() {
     }
   };
 
-  const getPlatformColor = (platform: SocialAccount['platform']) => {
+  const getPlatformColor = (platform: SocialPlatform) => {
     switch (platform) {
       case 'INSTAGRAM':
         return 'from-pink-500 to-purple-600';
@@ -127,13 +103,20 @@ export default function SocialMediaPage() {
     }
   };
 
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toString();
-  };
+  const connectedAccounts = accounts.filter(a => a.isActive);
+  const connectedCount = connectedAccounts.length;
 
-  const connectedCount = accounts.filter(a => a.isConnected).length;
+  const getAccountForPlatform = (platform: SocialPlatform) =>
+    accounts.find(a => a.platform === platform && a.isActive);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+        Loading social accounts...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -144,13 +127,19 @@ export default function SocialMediaPage() {
         </p>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Overview */}
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground mb-1">Connected Accounts</p>
-              <p className="text-3xl font-bold">{connectedCount} / {accounts.length}</p>
+              <p className="text-3xl font-bold">{connectedCount} / {ALL_PLATFORMS.length}</p>
             </div>
             <div className="p-4 bg-brand-blue/10 rounded-full">
               <Link2 className="h-8 w-8 text-brand-blue" />
@@ -161,104 +150,120 @@ export default function SocialMediaPage() {
 
       {/* Social Accounts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {accounts.map((account) => (
-          <Card key={account.id} className="overflow-hidden">
-            <div className={`h-2 bg-gradient-to-r ${getPlatformColor(account.platform)}`} />
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-3 bg-gradient-to-br ${getPlatformColor(account.platform)} rounded-lg text-white`}>
-                    {getPlatformIcon(account.platform)}
+        {ALL_PLATFORMS.map((platform) => {
+          const account = getAccountForPlatform(platform);
+          const isConnected = !!account;
+          return (
+            <Card key={platform} className="overflow-hidden">
+              <div className={`h-2 bg-gradient-to-r ${getPlatformColor(platform)}`} />
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-3 bg-gradient-to-br ${getPlatformColor(platform)} rounded-lg text-white`}>
+                      {getPlatformIcon(platform)}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">{platform}</h3>
+                      {isConnected && account?.username && (
+                        <p className="text-sm text-muted-foreground">@{account.username}</p>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">{account.platform}</h3>
-                    {account.isConnected && account.username && (
-                      <p className="text-sm text-muted-foreground">{account.username}</p>
+                  {isConnected ? (
+                    <StatusBadge variant="success" size="sm">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Connected
+                    </StatusBadge>
+                  ) : (
+                    <StatusBadge variant="default" size="sm">
+                      <AlertCircle className="h-3 w-3 mr-1" />
+                      Not Connected
+                    </StatusBadge>
+                  )}
+                </div>
+
+                {isConnected && account ? (
+                  <div className="space-y-4">
+                    {/* Display name */}
+                    {account.displayName && (
+                      <div className="p-3 bg-muted rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Account</p>
+                        <p className="text-sm font-medium">{account.displayName}</p>
+                      </div>
                     )}
+
+                    {/* Permissions */}
+                    {account.permissions.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Permissions</p>
+                        <div className="flex flex-wrap gap-2">
+                          {account.permissions.map((perm) => (
+                            <span
+                              key={perm}
+                              className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full"
+                            >
+                              {perm.replace(/_/g, ' ')}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Last Sync */}
+                    {account.lastSyncedAt && (
+                      <p className="text-xs text-muted-foreground">
+                        Last synced: {new Date(account.lastSyncedAt).toLocaleString()}
+                      </p>
+                    )}
+
+                    {/* Token expiry */}
+                    {account.tokenExpiresAt && (
+                      <p className="text-xs text-muted-foreground">
+                        Token expires: {new Date(account.tokenExpiresAt).toLocaleString()}
+                      </p>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRefresh(account.id)}
+                        disabled={actionLoading === account.id}
+                        className="flex-1"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-1" />
+                        {actionLoading === account.id ? 'Syncing...' : 'Refresh'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDisconnect(account.id)}
+                        disabled={actionLoading === account.id}
+                        className="flex-1 text-red-600 hover:text-red-700"
+                      >
+                        Disconnect
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                {account.isConnected ? (
-                  <StatusBadge variant="success" size="sm">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Connected
-                  </StatusBadge>
                 ) : (
-                  <StatusBadge variant="default" size="sm">
-                    <AlertCircle className="h-3 w-3 mr-1" />
-                    Not Connected
-                  </StatusBadge>
-                )}
-              </div>
-
-              {account.isConnected ? (
-                <div className="space-y-4">
-                  {/* Stats */}
-                  {account.followers && (
-                    <div className="p-3 bg-muted rounded-lg">
-                      <p className="text-xs text-muted-foreground mb-1">Followers</p>
-                      <p className="text-xl font-bold">{formatNumber(account.followers)}</p>
-                    </div>
-                  )}
-
-                  {/* Permissions */}
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Permissions</p>
-                    <div className="flex flex-wrap gap-2">
-                      {account.permissions.map((perm) => (
-                        <span
-                          key={perm}
-                          className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full"
-                        >
-                          {perm.replace('_', ' ')}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Last Sync */}
-                  {account.lastSync && (
-                    <p className="text-xs text-muted-foreground">
-                      Last synced: {new Date(account.lastSync).toLocaleString()}
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Connect your {platform} account to publish content directly from the platform.
                     </p>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
                     <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRefresh(account.id)}
-                      className="flex-1"
+                      onClick={() => handleConnect(platform)}
+                      disabled={actionLoading === platform}
+                      className="w-full"
                     >
-                      <RefreshCw className="h-4 w-4 mr-1" />
-                      Refresh
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDisconnect(account.id)}
-                      className="flex-1 text-red-600 hover:text-red-700"
-                    >
-                      Disconnect
+                      {actionLoading === platform ? 'Connecting...' : `Connect ${platform}`}
                     </Button>
                   </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Connect your {account.platform} account to publish content directly from the platform.
-                  </p>
-                  <Button
-                    onClick={() => handleConnect(account.platform)}
-                    className="w-full"
-                  >
-                    Connect {account.platform}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Info Card */}

@@ -19,36 +19,46 @@ import { useBrandProfile, useUser } from '@/contexts/AuthContext';
 import { formatCurrency, formatNumber } from '@/lib/utils';
 import { KYCBanner } from '@/components/dashboard/KYCBanner';
 import { useSearchParams } from 'next/navigation';
+import { brandService, BrandDashboardStats } from '@/services/brand.service';
+import { campaignService } from '@/services/campaign.service';
 
 export default function BrandDashboard() {
   const brandProfile = useBrandProfile();
   const user = useUser();
   const searchParams = useSearchParams();
   const [verificationMsg, setVerificationMsg] = useState(false);
-  const [stats, setStats] = useState({
-    activeCampaigns: 5,
-    totalSpent: 85000,
-    creatorsEngaged: 23,
-    avgEngagement: 4.2,
-    pendingOrders: 2,
-    completedCampaigns: 12,
+  const [stats, setStats] = useState<BrandDashboardStats>({
+    activeCampaigns: 0,
+    totalSpent: 0,
+    creatorsEngaged: 0,
+    avgEngagement: 0,
+    pendingOrders: 0,
+    completedCampaigns: 0,
   });
+  const [recentCampaigns, setRecentCampaigns] = useState<any[]>([]);
 
   useEffect(() => {
     if (searchParams.get('verification') === 'submitted') {
       setVerificationMsg(true);
       setTimeout(() => setVerificationMsg(false), 6000);
     }
-    // Mock data - in real app, fetch from API
-    setStats({
-      activeCampaigns: 5,
-      totalSpent: 85000,
-      creatorsEngaged: 23,
-      avgEngagement: 4.2,
-      pendingOrders: 2,
-      completedCampaigns: 12,
-    });
+    loadDashboardData();
   }, [searchParams]);
+
+  const loadDashboardData = async () => {
+    try {
+      const dashboardStats = await brandService.getDashboardStats();
+      setStats(dashboardStats);
+    } catch (error) {
+      console.error('Failed to load brand dashboard stats:', error);
+    }
+    try {
+      const campaignsResponse = await campaignService.list({ limit: 5 });
+      setRecentCampaigns(campaignsResponse.items || []);
+    } catch (error) {
+      console.error('Failed to load recent campaigns:', error);
+    }
+  };
 
   if (!user) {
     return (
@@ -86,33 +96,6 @@ export default function BrandDashboard() {
       change: '+0.3',
       icon: <TrendingUp className="h-4 w-4" />,
       color: 'text-orange-600',
-    },
-  ];
-
-  const recentCampaigns = [
-    {
-      id: 1,
-      name: 'Summer Collection Launch',
-      status: 'active',
-      creators: 5,
-      budget: 15000,
-      engagement: 4.5,
-    },
-    {
-      id: 2,
-      name: 'Product Review Campaign',
-      status: 'active',
-      creators: 3,
-      budget: 8000,
-      engagement: 4.2,
-    },
-    {
-      id: 3,
-      name: 'Brand Awareness Q3',
-      status: 'completed',
-      creators: 8,
-      budget: 25000,
-      engagement: 4.8,
     },
   ];
 
@@ -196,30 +179,35 @@ export default function BrandDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentCampaigns.map((campaign) => (
+              {recentCampaigns.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  No campaigns yet. Create your first campaign to get started.
+                </p>
+              ) : (
+                recentCampaigns.map((campaign) => (
                 <div key={campaign.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
-                      <h3 className="font-medium">{campaign.name}</h3>
+                      <h3 className="font-medium">{campaign.title}</h3>
                       <span className={`px-2 py-1 text-xs rounded-full ${
-                        campaign.status === 'active' 
-                          ? 'bg-green-100 text-green-800' 
+                        campaign.status === 'ACTIVE'
+                          ? 'bg-green-100 text-green-800'
                           : 'bg-gray-100 text-gray-800'
                       }`}>
                         {campaign.status}
                       </span>
                     </div>
                     <div className="flex items-center space-x-4 mt-2 text-sm text-muted-foreground">
-                      <span>{campaign.creators} creators</span>
-                      <span>{formatCurrency(campaign.budget)}</span>
-                      <span>{campaign.engagement} avg engagement</span>
+                      <span>{campaign.applicationCount} applicants</span>
+                      <span>{formatCurrency(campaign.budgetMax)}</span>
                     </div>
                   </div>
                   <Button variant="outline" size="sm">
                     View Details
                   </Button>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </CardContent>
         </Card>

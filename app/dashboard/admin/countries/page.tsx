@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Globe, DollarSign } from 'lucide-react';
 import { Button, DataTable, StatusBadge, EmptyState } from '@/components/ui';
 import { Country } from '@/types/api-contracts/country.types';
-import { mockStore } from '@/lib/mock-data/mock-store';
+import { countryService } from '@/services/country.service';
 import { useRouter } from 'next/navigation';
 
 export default function CountriesPage() {
@@ -19,9 +19,8 @@ export default function CountriesPage() {
   const loadCountries = async () => {
     setLoading(true);
     try {
-      // Mock data - replace with actual API call
-      const data = mockStore.getCountries();
-      setCountries(data);
+      const response = await countryService.getCountries();
+      setCountries(response.countries || []);
     } catch (error) {
       console.error('Failed to load countries:', error);
     } finally {
@@ -100,7 +99,7 @@ export default function CountriesPage() {
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this country?')) {
       try {
-        mockStore.deleteCountry(id);
+        await countryService.deleteCountry(id);
         loadCountries();
       } catch (error) {
         console.error('Failed to delete country:', error);

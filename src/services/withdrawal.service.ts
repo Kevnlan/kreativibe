@@ -13,6 +13,10 @@ export const withdrawalService = {
     return apiClient.post('/withdrawals/list', filters ?? {});
   },
 
+  async getAdminWithdrawals(filters?: WithdrawalFilters): Promise<WithdrawalListResponse> {
+    return apiClient.post('/admin/withdrawals/list', filters ?? {});
+  },
+
   async getWithdrawalById(id: string): Promise<WithdrawalRequest> {
     return apiClient.post('/withdrawals/get', { id });
   },

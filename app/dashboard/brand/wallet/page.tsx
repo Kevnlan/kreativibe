@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Wallet, Plus, ArrowUpRight, ArrowDownRight, DollarSign, CreditCard, Building2 } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, CardTitle, DataTable, StatCard, StatusBadge } from '@/components/ui';
 import { useRouter } from 'next/navigation';
+import { walletService } from '@/services/wallet.service';
+import { Wallet as WalletType, Transaction as ApiTransaction } from '@/types/api-contracts/wallet.types';
 
 interface Transaction {
   id: string;
@@ -16,73 +18,48 @@ interface Transaction {
   reference?: string;
 }
 
+function mapTransaction(t: ApiTransaction): Transaction {
+  const isCredit = t.type === 'CREDIT' || t.type === 'TOPUP' || t.type === 'REFUND';
+  return {
+    id: t.id,
+    type: isCredit ? 'CREDIT' : 'DEBIT',
+    description: t.description,
+    amount: t.amount,
+    balance: 0,
+    status: t.status === 'CANCELLED' ? 'FAILED' : t.status,
+    createdAt: t.createdAt,
+    reference: t.reference,
+  };
+}
+
 export default function BrandWalletPage() {
   const router = useRouter();
-  const [balance, setBalance] = useState(45000);
+  const [balance, setBalance] = useState(0);
+  const [currency, setCurrency] = useState('KES');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadTransactions();
+    loadWalletData();
   }, []);
 
-  const loadTransactions = async () => {
+  const loadWalletData = async () => {
     setLoading(true);
     try {
-      // Mock data
-      const mockTransactions: Transaction[] = [
-        {
-          id: '1',
-          type: 'CREDIT',
-          description: 'Wallet top-up via M-PESA',
-          amount: 50000,
-          balance: 95000,
-          status: 'COMPLETED',
-          createdAt: '2024-03-18T10:00:00Z',
-          reference: 'MPE123456789',
-        },
-        {
-          id: '2',
-          type: 'DEBIT',
-          description: 'Content purchase - Fashion Lookbook Reel',
-          amount: 5000,
-          balance: 90000,
-          status: 'COMPLETED',
-          createdAt: '2024-03-18T11:30:00Z',
-          reference: 'PUR987654321',
-        },
-        {
-          id: '3',
-          type: 'DEBIT',
-          description: 'Content purchase - Tech Review Video',
-          amount: 15000,
-          balance: 75000,
-          status: 'COMPLETED',
-          createdAt: '2024-03-17T14:00:00Z',
-        },
-        {
-          id: '4',
-          type: 'CREDIT',
-          description: 'Wallet top-up via Bank Transfer',
-          amount: 30000,
-          balance: 45000,
-          status: 'PENDING',
-          createdAt: '2024-03-17T09:00:00Z',
-          reference: 'BNK445566778',
-        },
-        {
-          id: '5',
-          type: 'DEBIT',
-          description: 'Content purchase - Food Recipe Post',
-          amount: 3500,
-          balance: 41500,
-          status: 'COMPLETED',
-          createdAt: '2024-03-16T16:00:00Z',
-        },
-      ];
-      setTransactions(mockTransactions);
+      const { wallet, recentTransactions } = await walletService.getWalletBalance();
+      setBalance(wallet.balance);
+      setCurrency(wallet.currency);
+      const txResponse = await walletService.getTransactions({ limit: 50 });
+      const allTx = [...recentTransactions, ...txResponse.transactions];
+      const seen = new Set<string>();
+      const deduped = allTx.filter(t => {
+        if (seen.has(t.id)) return false;
+        seen.add(t.id);
+        return true;
+      });
+      setTransactions(deduped.map(mapTransaction));
     } catch (error) {
-      console.error('Failed to load transactions:', error);
+      console.error('Failed to load wallet data:', error);
     } finally {
       setLoading(false);
     }
@@ -91,7 +68,7 @@ export default function BrandWalletPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
-      currency: 'KES',
+      currency: currency,
     }).format(amount);
   };
 

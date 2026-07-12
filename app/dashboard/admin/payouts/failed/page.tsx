@@ -1,86 +1,108 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FailedPayoutHandler, FailedPayout } from '@/components/payments/FailedPayoutHandler';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { withdrawalService } from '@/services/withdrawal.service';
+import { WithdrawalRequest, BankDetails, MPESADetails } from '@/types/api-contracts/withdrawal.types';
 
-// Mock data for development
-const mockFailedPayouts: FailedPayout[] = [
-  {
-    id: 'f1',
+function isBankDetails(d: BankDetails | MPESADetails): d is BankDetails {
+  return (d as BankDetails).bankName !== undefined;
+}
+
+function mapWithdrawalToFailedPayout(w: WithdrawalRequest): FailedPayout {
+  const accountName = w.accountDetails.accountName;
+  const bankName = isBankDetails(w.accountDetails) ? w.accountDetails.bankName : 'M-PESA';
+  const accountNumber = isBankDetails(w.accountDetails)
+    ? w.accountDetails.accountNumber
+    : (w.accountDetails as MPESADetails).phoneNumber;
+
+  return {
+    id: w.id,
     creative: {
-      id: 'c1',
-      name: 'James Ochieng',
-      email: 'james@example.com',
+      id: w.userId,
+      name: accountName,
+      email: '',
     },
-    amount: 75000,
-    currency: 'KES',
+    amount: w.amount,
+    currency: w.currency,
     bankDetails: {
-      bankName: 'Standard Chartered',
-      accountNumber: '5544332211',
+      bankName,
+      accountNumber,
     },
-    failureReason: 'Insufficient funds in platform account',
-    failureCode: 'INSUFFICIENT_FUNDS',
-    attemptCount: 3,
-    lastAttemptAt: '2024-01-14T16:00:00Z',
-    nextRetryAt: '2024-01-15T16:00:00Z',
-    status: 'failed',
-  },
-  {
-    id: 'f2',
-    creative: {
-      id: 'c2',
-      name: 'Grace Njoroge',
-      email: 'grace@example.com',
-    },
-    amount: 50000,
-    currency: 'KES',
-    bankDetails: {
-      bankName: 'Absa Bank',
-      accountNumber: '9988776655',
-    },
-    failureReason: 'Invalid bank account details',
-    failureCode: 'INVALID_ACCOUNT',
+    failureReason: w.rejectionReason || 'Payout failed',
+    failureCode: 'OTHER',
     attemptCount: 1,
-    lastAttemptAt: '2024-01-15T10:00:00Z',
+    lastAttemptAt: w.processedAt || w.createdAt,
     status: 'failed',
-  },
-];
+  };
+}
 
 export default function FailedPayoutsPage() {
   const router = useRouter();
-  const [failedPayouts, setFailedPayouts] = useState<FailedPayout[]>(mockFailedPayouts);
+  const [failedPayouts, setFailedPayouts] = useState<FailedPayout[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadFailedPayouts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await withdrawalService.getAdminWithdrawals({ status: 'FAILED' });
+      setFailedPayouts(response.withdrawals.map(mapWithdrawalToFailedPayout));
+    } catch {
+      setError('Failed to load failed payouts. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadFailedPayouts();
+  }, [loadFailedPayouts]);
 
   const handleBack = () => {
     router.push('/dashboard/admin/payouts');
   };
 
-  const handleRetry = (id: string) => {
+  const handleRetry = async (id: string) => {
     setFailedPayouts(prev =>
       prev.map(p => (p.id === id ? { ...p, status: 'retrying' as const } : p))
     );
-    console.log('Retrying payout:', id);
-    // Simulate retry
-    setTimeout(() => {
+    try {
+      await withdrawalService.processWithdrawal(id);
       setFailedPayouts(prev => prev.filter(p => p.id !== id));
-    }, 2000);
+    } catch {
+      setError('Failed to retry payout. Please try again.');
+      setFailedPayouts(prev =>
+        prev.map(p => (p.id === id ? { ...p, status: 'failed' as const } : p))
+      );
+    }
   };
 
-  const handleResolve = (id: string, resolution: string) => {
-    setFailedPayouts(prev =>
-      prev.map(p => (p.id === id ? { ...p, status: 'resolved' as const } : p))
-    );
-    console.log('Resolving payout:', id, resolution);
-    setTimeout(() => {
-      setFailedPayouts(prev => prev.filter(p => p.id !== id));
-    }, 1000);
+  const handleResolve = async (id: string, _resolution: string) => {
+    try {
+      await withdrawalService.processWithdrawal(id);
+      setFailedPayouts(prev =>
+        prev.map(p => (p.id === id ? { ...p, status: 'resolved' as const } : p))
+      );
+      setTimeout(() => {
+        setFailedPayouts(prev => prev.filter(p => p.id !== id));
+      }, 1000);
+    } catch {
+      setError('Failed to resolve payout. Please try again.');
+    }
   };
 
-  const handleManualTransfer = (id: string) => {
-    console.log('Initiating manual transfer for:', id);
-    // In production, would open manual transfer flow
+  const handleManualTransfer = async (id: string) => {
+    try {
+      await withdrawalService.processWithdrawal(id);
+      setFailedPayouts(prev => prev.filter(p => p.id !== id));
+    } catch {
+      setError('Failed to process manual transfer. Please try again.');
+    }
   };
 
   return (
@@ -101,13 +123,25 @@ export default function FailedPayoutsPage() {
         </div>
       </div>
 
-      {/* Content */}
-      <FailedPayoutHandler
-        failedPayouts={failedPayouts}
-        onRetry={handleRetry}
-        onResolve={handleResolve}
-        onManualTransfer={handleManualTransfer}
-      />
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin mr-2" />
+          Loading failed payouts...
+        </div>
+      ) : (
+        <FailedPayoutHandler
+          failedPayouts={failedPayouts}
+          onRetry={handleRetry}
+          onResolve={handleResolve}
+          onManualTransfer={handleManualTransfer}
+        />
+      )}
     </div>
   );
 }
