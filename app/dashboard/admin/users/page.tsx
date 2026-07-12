@@ -12,6 +12,8 @@ interface AdminUser {
   role: 'CREATOR' | 'BRAND' | 'ADMIN' | 'SUPPORT_AGENT';
   isActive: boolean;
   isEmailVerified: boolean;
+  isVerified: boolean;
+  status: 'ACTIVE' | 'SUSPENDED' | 'BANNED';
   countryId: string;
   createdAt: string;
 }
@@ -29,18 +31,11 @@ const COUNTRY_NAMES: Record<string, string> = {
   'tanzania-001': 'Tanzania',
 };
 
-const mockUsers: AdminUser[] = [
-  { id: '1', name: 'Sarah Kimani', email: 'sarah@example.com', role: 'CREATOR', isActive: true, isEmailVerified: true, countryId: 'kenya-001', createdAt: '2026-01-15T10:00:00Z' },
-  { id: '2', name: 'TechBrand KE', email: 'info@techbrand.ke', role: 'BRAND', isActive: true, isEmailVerified: true, countryId: 'kenya-001', createdAt: '2026-01-10T10:00:00Z' },
-  { id: '3', name: 'Admin User', email: 'admin@kreativibe.com', role: 'ADMIN', isActive: true, isEmailVerified: true, countryId: 'kenya-001', createdAt: '2025-12-01T10:00:00Z' },
-  { id: '4', name: 'Grace Wanjiru', email: 'grace@example.com', role: 'CREATOR', isActive: false, isEmailVerified: true, countryId: 'kenya-001', createdAt: '2026-02-10T10:00:00Z' },
-  { id: '5', name: 'Support Agent', email: 'support@kreativibe.com', role: 'SUPPORT_AGENT', isActive: true, isEmailVerified: true, countryId: 'kenya-001', createdAt: '2026-01-05T10:00:00Z' },
-  { id: '6', name: 'Michael Kamau', email: 'michael@example.com', role: 'CREATOR', isActive: true, isEmailVerified: false, countryId: 'kenya-001', createdAt: '2026-01-20T10:00:00Z' },
-];
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -49,22 +44,50 @@ export default function AdminUsersPage() {
 
   const loadUsers = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await adminService.getUsers({ limit: 100 });
-      setUsers(response.data || []);
+      const response = await adminService.listUsers({ limit: 100 });
+      setUsers(response.items || []);
     } catch {
-      setUsers(mockUsers);
+      setError('Failed to load users.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleToggle = async (id: string) => {
+  const handleSuspend = async (id: string) => {
     setTogglingId(id);
     try {
-      await adminService.toggleUser(id);
+      await adminService.suspendUser(id, 'Suspended via admin panel');
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, status: 'SUSPENDED', isActive: false } : u));
     } catch {}
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, isActive: !u.isActive } : u));
+    setTogglingId(null);
+  };
+
+  const handleBan = async (id: string) => {
+    setTogglingId(id);
+    try {
+      await adminService.banUser(id, 'Banned via admin panel');
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, status: 'BANNED', isActive: false } : u));
+    } catch {}
+    setTogglingId(null);
+  };
+
+  const handleReinstate = async (id: string) => {
+    setTogglingId(id);
+    try {
+      await adminService.reinstateUser(id, 'Reinstated via admin panel');
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, status: 'ACTIVE', isActive: true } : u));
+    } catch {}
+    setTogglingId(null);
+  };
+
+  const handleVerify = async (id: string) => {
+    setTogglingId(id);
+    try {
+      await adminService.verifyUser(id, true);
+      setUsers(prev => prev.map(u => u.id === id ? { ...u, isVerified: true } : u));
+    } catch {}
     setTogglingId(null);
   };
 
@@ -135,14 +158,58 @@ export default function AdminUsersPage() {
       key: 'actions',
       label: 'Actions',
       render: (_: any, row: AdminUser) => (
-        <Button
-          variant={row.isActive ? 'destructive' : 'outline'}
-          size="sm"
-          disabled={togglingId === row.id || row.role === 'ADMIN'}
-          onClick={() => handleToggle(row.id)}
-        >
-          {row.isActive ? 'Suspend' : 'Restore'}
-        </Button>
+        <div className="flex items-center gap-2">
+          {row.status === 'ACTIVE' && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={togglingId === row.id || row.role === 'ADMIN'}
+              onClick={() => handleSuspend(row.id)}
+            >
+              Suspend
+            </Button>
+          )}
+          {row.status === 'SUSPENDED' && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={togglingId === row.id}
+              onClick={() => handleReinstate(row.id)}
+            >
+              Reinstate
+            </Button>
+          )}
+          {row.status !== 'BANNED' && row.status !== 'SUSPENDED' && (
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={togglingId === row.id || row.role === 'ADMIN'}
+              onClick={() => handleBan(row.id)}
+            >
+              Ban
+            </Button>
+          )}
+          {row.status === 'BANNED' && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={togglingId === row.id}
+              onClick={() => handleReinstate(row.id)}
+            >
+              Reinstate
+            </Button>
+          )}
+          {!row.isVerified && row.role !== 'ADMIN' && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={togglingId === row.id}
+              onClick={() => handleVerify(row.id)}
+            >
+              Verify
+            </Button>
+          )}
+        </div>
       ),
     },
   ];

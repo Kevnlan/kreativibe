@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Users, ShoppingBag, FileText, DollarSign, TrendingUp, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { StatCard, Card, CardContent, CardHeader, CardTitle, DataTable, StatusBadge } from '@/components/ui';
 import { useRouter } from 'next/navigation';
+import { adminService, PlatformStats } from '@/services/admin.service';
 
 interface DashboardStats {
   totalUsers: number;
@@ -26,58 +27,56 @@ interface RecentActivity {
   status: 'pending' | 'completed' | 'failed';
 }
 
+function mapPlatformStats(ps: PlatformStats): DashboardStats {
+  return {
+    totalUsers: ps.users.total,
+    totalCreators: ps.users.creators,
+    totalBrands: ps.users.brands,
+    totalRevenue: ps.revenue.grossVolume,
+    pendingKYC: 0,
+    pendingBrandVerification: 0,
+    pendingContentModeration: ps.operations.pendingModeration,
+    pendingWithdrawals: ps.operations.pendingWithdrawals,
+    activeCountries: 0,
+    totalContent: ps.content.total,
+  };
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats>({
-    totalUsers: 1247,
-    totalCreators: 856,
-    totalBrands: 391,
-    totalRevenue: 45678900,
-    pendingKYC: 12,
-    pendingBrandVerification: 5,
-    pendingContentModeration: 8,
-    pendingWithdrawals: 3,
-    activeCountries: 3,
-    totalContent: 3421,
+    totalUsers: 0,
+    totalCreators: 0,
+    totalBrands: 0,
+    totalRevenue: 0,
+    pendingKYC: 0,
+    pendingBrandVerification: 0,
+    pendingContentModeration: 0,
+    pendingWithdrawals: 0,
+    activeCountries: 0,
+    totalContent: 0,
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([
-    {
-      id: '1',
-      type: 'kyc_submitted',
-      description: 'New KYC submission from John Doe',
-      timestamp: new Date().toISOString(),
-      status: 'pending',
-    },
-    {
-      id: '2',
-      type: 'brand_verification',
-      description: 'Brand verification request from Acme Corp',
-      timestamp: new Date(Date.now() - 3600000).toISOString(),
-      status: 'pending',
-    },
-    {
-      id: '3',
-      type: 'withdrawal_request',
-      description: 'Withdrawal request KES 50,000 from Jane Smith',
-      timestamp: new Date(Date.now() - 7200000).toISOString(),
-      status: 'pending',
-    },
-    {
-      id: '4',
-      type: 'content_uploaded',
-      description: 'New content uploaded for moderation',
-      timestamp: new Date(Date.now() - 10800000).toISOString(),
-      status: 'completed',
-    },
-    {
-      id: '5',
-      type: 'user_signup',
-      description: 'New creator signup from Kenya',
-      timestamp: new Date(Date.now() - 14400000).toISOString(),
-      status: 'completed',
-    },
-  ]);
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const platformStats = await adminService.getPlatformStats();
+      setStats(mapPlatformStats(platformStats));
+    } catch {
+      setError('Failed to load platform stats.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-KE', {
