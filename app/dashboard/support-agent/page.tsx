@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MessageSquare, Users, Clock, CheckCircle, AlertCircle, Search, TrendingUp } from 'lucide-react';
+import { MessageSquare, Users, Clock, CheckCircle, AlertCircle, Search, TrendingUp, Loader2 } from 'lucide-react';
 import { Button, DataTable, StatCard, StatusBadge, Input, Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { useRouter } from 'next/navigation';
+import { supportService } from '@/services/support.service';
+import { SupportTicket, TicketStatus, TicketPriority, SupportStats } from '@/types/api-contracts/support.types';
 
 interface Ticket {
   id: string;
@@ -12,112 +14,61 @@ interface Ticket {
   userName: string;
   userEmail: string;
   category: string;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  status: 'OPEN' | 'IN_PROGRESS' | 'WAITING' | 'RESOLVED' | 'CLOSED';
+  priority: TicketPriority;
+  status: TicketStatus;
   createdAt: string;
   updatedAt: string;
   assignedTo?: string;
 }
 
-interface SupportStats {
-  totalTickets: number;
-  openTickets: number;
-  inProgress: number;
-  resolved: number;
-  myTickets: number;
-  avgResponseTime: string;
+function mapTicket(t: SupportTicket): Ticket {
+  return {
+    id: t.id,
+    ticketNumber: t.id.slice(-8).toUpperCase(),
+    subject: t.subject,
+    userName: t.requesterId.slice(0, 8),
+    userEmail: '',
+    category: t.category,
+    priority: t.priority,
+    status: t.status,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+    assignedTo: t.assignedAgentId ? 'Assigned' : undefined,
+  };
 }
 
 export default function SupportAgentDashboard() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
 
   const [stats, setStats] = useState<SupportStats>({
-    totalTickets: 45,
-    openTickets: 12,
-    inProgress: 8,
-    resolved: 25,
-    myTickets: 6,
-    avgResponseTime: '2.5 hrs',
+    total: 0,
+    resolved: 0,
+    resolutionRate: 0,
+    averageRating: 0,
+    byStatus: [],
+    byPriority: [],
   });
 
   useEffect(() => {
-    loadTickets();
+    loadData();
   }, []);
 
-  const loadTickets = async () => {
+  const loadData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Mock data - replace with actual API call
-      setTickets([
-        {
-          id: '1',
-          ticketNumber: 'TKT-1001',
-          subject: 'Cannot upload content',
-          userName: 'John Doe',
-          userEmail: 'john@example.com',
-          category: 'Technical',
-          priority: 'HIGH',
-          status: 'OPEN',
-          createdAt: '2024-03-18T10:00:00Z',
-          updatedAt: '2024-03-18T10:00:00Z',
-        },
-        {
-          id: '2',
-          ticketNumber: 'TKT-1002',
-          subject: 'Payment not received',
-          userName: 'Jane Smith',
-          userEmail: 'jane@example.com',
-          category: 'Billing',
-          priority: 'URGENT',
-          status: 'IN_PROGRESS',
-          createdAt: '2024-03-18T09:30:00Z',
-          updatedAt: '2024-03-18T11:00:00Z',
-          assignedTo: 'You',
-        },
-        {
-          id: '3',
-          ticketNumber: 'TKT-1003',
-          subject: 'How to verify my account?',
-          userName: 'Mike Johnson',
-          userEmail: 'mike@example.com',
-          category: 'Account',
-          priority: 'MEDIUM',
-          status: 'WAITING',
-          createdAt: '2024-03-17T14:00:00Z',
-          updatedAt: '2024-03-18T08:00:00Z',
-          assignedTo: 'You',
-        },
-        {
-          id: '4',
-          ticketNumber: 'TKT-1004',
-          subject: 'Withdrawal delay',
-          userName: 'Sarah Wilson',
-          userEmail: 'sarah@example.com',
-          category: 'Financial',
-          priority: 'HIGH',
-          status: 'OPEN',
-          createdAt: '2024-03-18T08:00:00Z',
-          updatedAt: '2024-03-18T08:00:00Z',
-        },
-        {
-          id: '5',
-          ticketNumber: 'TKT-1005',
-          subject: 'Profile update issue',
-          userName: 'David Brown',
-          userEmail: 'david@example.com',
-          category: 'Account',
-          priority: 'LOW',
-          status: 'RESOLVED',
-          createdAt: '2024-03-17T10:00:00Z',
-          updatedAt: '2024-03-18T09:00:00Z',
-          assignedTo: 'You',
-        },
+      const [ticketsRes, statsRes] = await Promise.all([
+        supportService.listAllTickets({ page: 1, limit: 50 }),
+        supportService.getStats(),
       ]);
-    } catch (error) {
-      console.error('Failed to load tickets:', error);
+      setTickets((ticketsRes.items || []).map(mapTicket));
+      setStats(statsRes);
+    } catch {
+      setError('Failed to load support data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -142,7 +93,7 @@ export default function SupportAgentDashboard() {
         return 'warning';
       case 'IN_PROGRESS':
         return 'processing';
-      case 'WAITING':
+      case 'WAITING_ON_CUSTOMER':
         return 'pending';
       case 'RESOLVED':
         return 'success';
@@ -237,19 +188,19 @@ export default function SupportAgentDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Tickets"
-          value={stats.totalTickets.toString()}
+          value={stats.total.toString()}
           icon={<MessageSquare className="h-4 w-4" />}
           iconColor="text-blue-600"
         />
         <StatCard
           title="Open Tickets"
-          value={stats.openTickets.toString()}
+          value={(stats.byStatus.find(s => s.status === 'OPEN')?.count ?? 0).toString()}
           icon={<AlertCircle className="h-4 w-4" />}
           iconColor="text-orange-600"
         />
         <StatCard
           title="In Progress"
-          value={stats.inProgress.toString()}
+          value={(stats.byStatus.find(s => s.status === 'IN_PROGRESS')?.count ?? 0).toString()}
           icon={<Clock className="h-4 w-4" />}
           iconColor="text-purple-600"
         />
@@ -263,15 +214,15 @@ export default function SupportAgentDashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <StatCard
-          title="My Assigned Tickets"
-          value={stats.myTickets.toString()}
-          icon={<Users className="h-4 w-4" />}
+          title="Resolution Rate"
+          value={`${stats.resolutionRate}%`}
+          icon={<TrendingUp className="h-4 w-4" />}
           iconColor="text-brand-blue"
         />
         <StatCard
-          title="Avg Response Time"
-          value={stats.avgResponseTime}
-          icon={<TrendingUp className="h-4 w-4" />}
+          title="Avg Rating"
+          value={stats.averageRating.toFixed(1)}
+          icon={<CheckCircle className="h-4 w-4" />}
           iconColor="text-green-600"
         />
       </div>
@@ -285,11 +236,11 @@ export default function SupportAgentDashboard() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <button className="p-3 border rounded-lg hover:bg-muted transition-colors text-center">
               <p className="text-sm font-medium">All Tickets</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.totalTickets}</p>
+              <p className="text-2xl font-bold text-blue-600">{stats.total}</p>
             </button>
             <button className="p-3 border rounded-lg hover:bg-muted transition-colors text-center">
               <p className="text-sm font-medium">My Tickets</p>
-              <p className="text-2xl font-bold text-purple-600">{stats.myTickets}</p>
+              <p className="text-2xl font-bold text-purple-600">{tickets.filter(t => t.assignedTo).length}</p>
             </button>
             <button className="p-3 border rounded-lg hover:bg-muted transition-colors text-center">
               <p className="text-sm font-medium">Urgent</p>

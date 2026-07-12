@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { MessageSquare, ThumbsUp, Eye, Plus, Search, Pin, ChevronRight, User, Camera, Building2, HelpCircle, Lightbulb, TrendingUp, Star } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MessageSquare, ThumbsUp, Eye, Plus, Search, Pin, ChevronRight, User, Camera, Building2, HelpCircle, Lightbulb, TrendingUp, Star, Loader2 } from 'lucide-react';
 import { Navigation } from '@/components/layout/Navigation';
 import { Footer } from '@/components/layout/Footer';
 import { Button, Input, Card, CardContent } from '@/components/ui';
 import { cn, formatNumber } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { communityService } from '@/services/community.service';
+import { CommunityPost, PostType } from '@/types/api-contracts/community.types';
 
 interface Post {
   id: string;
@@ -27,6 +29,45 @@ interface Post {
   color: string;
 }
 
+const TYPE_TO_CATEGORY: Record<PostType, string> = {
+  DISCUSSION: 'tips',
+  QUESTION: 'qa',
+  SHOWCASE: 'showcase',
+  GUIDE: 'campaigns',
+};
+
+const COLORS = [
+  'from-pink-400 to-rose-500',
+  'from-blue-400 to-indigo-500',
+  'from-orange-400 to-amber-500',
+  'from-violet-400 to-purple-500',
+  'from-emerald-400 to-green-500',
+  'from-cyan-400 to-sky-500',
+];
+
+function mapPost(p: CommunityPost, idx: number): Post {
+  const authorName = p.author?.name ?? 'Unknown';
+  const initials = authorName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  return {
+    id: p.id,
+    title: p.title,
+    body: p.body,
+    author: authorName,
+    authorRole: (p.author?.role === 'BRAND' ? 'BRAND' : 'CREATOR') as 'CREATOR' | 'BRAND',
+    authorInitials: initials,
+    category: TYPE_TO_CATEGORY[p.type] ?? 'tips',
+    tags: p.tags || [],
+    likes: p.upvotes || 0,
+    replies: p._count?.comments ?? 0,
+    views: p.views || 0,
+    isPinned: p.isPinned,
+    isQuestion: p.type === 'QUESTION',
+    hasAnswer: false,
+    createdAt: p.createdAt,
+    color: COLORS[idx % COLORS.length],
+  };
+}
+
 const CATEGORIES = [
   { id: 'all', label: 'All', icon: <MessageSquare className="h-4 w-4" /> },
   { id: 'tips', label: 'Creator Tips', icon: <Lightbulb className="h-4 w-4" /> },
@@ -35,124 +76,33 @@ const CATEGORIES = [
   { id: 'showcase', label: 'Content Showcase', icon: <Star className="h-4 w-4" /> },
 ];
 
-const mockPosts: Post[] = [
-  {
-    id: '1',
-    title: 'How I grew my TikTok from 5K to 100K followers in 3 months',
-    body: 'I want to share my journey and some key tactics that worked for me. Consistency, niche focus, and engaging with trends early were the game changers...',
-    author: 'Sarah Kimani',
-    authorRole: 'CREATOR',
-    authorInitials: 'SK',
-    category: 'tips',
-    tags: ['TikTok', 'Growth', 'Strategy'],
-    likes: 127,
-    replies: 34,
-    views: 2450,
-    isPinned: true,
-    isQuestion: false,
-    hasAnswer: false,
-    createdAt: '2026-03-20T10:00:00Z',
-    color: 'from-pink-400 to-rose-500',
-  },
-  {
-    id: '2',
-    title: 'What do brands actually look for when reviewing creator content?',
-    body: 'As a brand that has worked with 30+ creators, I can share what makes us choose certain creators over others and what causes us to reject submissions...',
-    author: 'TechBrand KE',
-    authorRole: 'BRAND',
-    authorInitials: 'TB',
-    category: 'campaigns',
-    tags: ['Brand Perspective', 'Content Quality'],
-    likes: 89,
-    replies: 56,
-    views: 1890,
-    isPinned: true,
-    isQuestion: false,
-    hasAnswer: false,
-    createdAt: '2026-03-19T14:00:00Z',
-    color: 'from-blue-400 to-indigo-500',
-  },
-  {
-    id: '3',
-    title: 'How should I price my Instagram Reels for a food brand?',
-    body: 'I have 25K followers with a 7% engagement rate. This would be my first paid collaboration. Any advice on pricing?',
-    author: 'Grace Wanjiru',
-    authorRole: 'CREATOR',
-    authorInitials: 'GW',
-    category: 'qa',
-    tags: ['Pricing', 'Instagram', 'Food'],
-    likes: 45,
-    replies: 23,
-    views: 780,
-    isPinned: false,
-    isQuestion: true,
-    hasAnswer: true,
-    createdAt: '2026-03-18T09:00:00Z',
-    color: 'from-orange-400 to-amber-500',
-  },
-  {
-    id: '4',
-    title: 'My best-performing content piece ever — breakdown inside',
-    body: 'This skincare routine TikTok got 5.1M views and 12.4% engagement. I\'m sharing the exact formula: hook, pacing, product reveal, CTA...',
-    author: 'Aisha Ndungu',
-    authorRole: 'CREATOR',
-    authorInitials: 'AN',
-    category: 'showcase',
-    tags: ['TikTok', 'Beauty', 'Viral'],
-    likes: 203,
-    replies: 67,
-    views: 4200,
-    isPinned: false,
-    isQuestion: false,
-    hasAnswer: false,
-    createdAt: '2026-03-17T11:00:00Z',
-    color: 'from-violet-400 to-purple-500',
-  },
-  {
-    id: '5',
-    title: 'Algorithm insights: what\'s working on Instagram in 2026',
-    body: 'After analyzing 200+ posts, here\'s what I\'ve learned about the current Instagram algorithm and how to work with it rather than against it...',
-    author: 'Rita Mwangi',
-    authorRole: 'CREATOR',
-    authorInitials: 'RM',
-    category: 'tips',
-    tags: ['Instagram', 'Algorithm', 'Reach'],
-    likes: 156,
-    replies: 41,
-    views: 3100,
-    isPinned: false,
-    isQuestion: false,
-    hasAnswer: false,
-    createdAt: '2026-03-16T16:00:00Z',
-    color: 'from-emerald-400 to-green-500',
-  },
-  {
-    id: '6',
-    title: 'Setting up a budget for influencer campaigns — a brand guide',
-    body: 'We\'ve spent 2M KES on creator campaigns this year. Here\'s how we allocate budget, what works, and what we\'d do differently...',
-    author: 'FashionHouse',
-    authorRole: 'BRAND',
-    authorInitials: 'FH',
-    category: 'campaigns',
-    tags: ['Budget', 'ROI', 'Campaign Planning'],
-    likes: 98,
-    replies: 29,
-    views: 1650,
-    isPinned: false,
-    isQuestion: false,
-    hasAnswer: false,
-    createdAt: '2026-03-15T13:00:00Z',
-    color: 'from-pink-500 to-rose-600',
-  },
-];
-
 export default function CommunityPage() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = mockPosts.filter(p => {
+  useEffect(() => {
+    loadPosts();
+  }, []);
+
+  const loadPosts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await communityService.listPosts({ page: 1, limit: 50 });
+      setPosts((response.items || []).map((p, idx) => mapPost(p, idx)));
+    } catch {
+      setError('Failed to load community posts.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filtered = posts.filter(p => {
     const matchesCategory = activeCategory === 'all' || p.category === activeCategory;
     const matchesSearch = !searchQuery ||
       p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -310,21 +260,34 @@ export default function CommunityPage() {
               )}
             </div>
 
-            {pinned.length > 0 && (
+            {loading && (
+              <div className="flex items-center justify-center py-16 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                Loading discussions...
+              </div>
+            )}
+
+            {error && !loading && (
+              <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            {!loading && !error && pinned.length > 0 && (
               <div className="space-y-3">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pinned</p>
                 {pinned.map(p => <PostCard key={p.id} post={p} />)}
               </div>
             )}
 
-            {regular.length > 0 && (
+            {!loading && !error && regular.length > 0 && (
               <div className="space-y-3">
                 {pinned.length > 0 && <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent Discussions</p>}
                 {regular.map(p => <PostCard key={p.id} post={p} />)}
               </div>
             )}
 
-            {filtered.length === 0 && (
+            {!loading && !error && filtered.length === 0 && (
               <div className="text-center py-16">
                 <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No discussions found</h3>

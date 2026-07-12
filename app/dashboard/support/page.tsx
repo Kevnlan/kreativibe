@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MessageSquare, Users, Clock, CheckCircle, AlertCircle, Search } from 'lucide-react';
+import { MessageSquare, Users, Clock, CheckCircle, AlertCircle, Search, Loader2 } from 'lucide-react';
 import { Button, DataTable, StatCard, StatusBadge, Input } from '@/components/ui';
 import { useRouter } from 'next/navigation';
+import { supportService } from '@/services/support.service';
+import { SupportTicket, TicketStatus, TicketPriority } from '@/types/api-contracts/support.types';
 
 interface Ticket {
   id: string;
@@ -12,15 +14,31 @@ interface Ticket {
   userName: string;
   userEmail: string;
   category: string;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  status: 'OPEN' | 'IN_PROGRESS' | 'WAITING' | 'RESOLVED' | 'CLOSED';
+  priority: TicketPriority;
+  status: TicketStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+function mapTicket(t: SupportTicket): Ticket {
+  return {
+    id: t.id,
+    ticketNumber: t.id.slice(-8).toUpperCase(),
+    subject: t.subject,
+    userName: t.requesterId.slice(0, 8),
+    userEmail: '',
+    category: t.category,
+    priority: t.priority,
+    status: t.status,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+  };
 }
 
 export default function SupportDashboard() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
 
@@ -30,48 +48,12 @@ export default function SupportDashboard() {
 
   const loadTickets = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Mock data - replace with actual API call
-      setTickets([
-        {
-          id: '1',
-          ticketNumber: 'TKT-1001',
-          subject: 'Cannot upload content',
-          userName: 'John Doe',
-          userEmail: 'john@example.com',
-          category: 'Technical',
-          priority: 'HIGH',
-          status: 'OPEN',
-          createdAt: '2024-03-18T10:00:00Z',
-          updatedAt: '2024-03-18T10:00:00Z',
-        },
-        {
-          id: '2',
-          ticketNumber: 'TKT-1002',
-          subject: 'Payment not received',
-          userName: 'Jane Smith',
-          userEmail: 'jane@example.com',
-          category: 'Billing',
-          priority: 'URGENT',
-          status: 'IN_PROGRESS',
-          createdAt: '2024-03-18T09:30:00Z',
-          updatedAt: '2024-03-18T11:00:00Z',
-        },
-        {
-          id: '3',
-          ticketNumber: 'TKT-1003',
-          subject: 'How to verify my account?',
-          userName: 'Mike Johnson',
-          userEmail: 'mike@example.com',
-          category: 'Account',
-          priority: 'MEDIUM',
-          status: 'WAITING',
-          createdAt: '2024-03-17T14:00:00Z',
-          updatedAt: '2024-03-18T08:00:00Z',
-        },
-      ]);
-    } catch (error) {
-      console.error('Failed to load tickets:', error);
+      const response = await supportService.listMyTickets({ page: 1, limit: 50 });
+      setTickets((response.items || []).map(mapTicket));
+    } catch {
+      setError('Failed to load tickets. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -96,7 +78,7 @@ export default function SupportDashboard() {
         return 'warning';
       case 'IN_PROGRESS':
         return 'processing';
-      case 'WAITING':
+      case 'WAITING_ON_CUSTOMER':
         return 'pending';
       case 'RESOLVED':
         return 'success';
