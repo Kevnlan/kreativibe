@@ -60,7 +60,7 @@ export default function CampaignAnalyticsPage() {
   const campaignOverview: CampaignOverviewData | null = campaign ? {
     campaignId: campaign.id,
     campaignName: campaign.title,
-    status: campaign.status.toLowerCase(),
+    status: campaign.status.toLowerCase() as 'active' | 'completed' | 'paused',
     startDate: campaign.startDate || '',
     endDate: campaign.endDate || '',
     budget: campaign.budgetMax,

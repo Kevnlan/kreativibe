@@ -64,7 +64,7 @@ class MockDataStore {
 
   updateWalletBalance(userId: string, amount: number): Wallet {
     const wallet = this.getWallet(userId);
-    wallet.balance += amount;
+    wallet.balance = Number(wallet.balance) + amount;
     wallet.updatedAt = new Date().toISOString();
     return wallet;
   }

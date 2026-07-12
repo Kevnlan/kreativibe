@@ -10,7 +10,6 @@ import { useRouter } from 'next/navigation';
 const statusVariants: Record<BookingStatus, string> = {
   PENDING: 'warning',
   CONFIRMED: 'success',
-  DECLINEDED: 'error',
   DECLINED: 'error',
   IN_PROGRESS: 'default',
   COMPLETED: 'success',

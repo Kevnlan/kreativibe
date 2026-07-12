@@ -74,7 +74,7 @@ export default function NewWithdrawalPage() {
       return false;
     }
 
-    if (!wallet || amount > wallet.balance) {
+    if (!wallet || amount > (Number(wallet.balance) || 0)) {
       setError('Insufficient balance');
       return false;
     }
@@ -168,7 +168,7 @@ export default function NewWithdrawalPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Available Balance</p>
-                  <p className="text-2xl font-bold">{formatCurrency(wallet.balance)}</p>
+                  <p className="text-2xl font-bold">{formatCurrency(Number(wallet.balance) || 0)}</p>
                 </div>
               </div>
             </div>
@@ -232,7 +232,7 @@ export default function NewWithdrawalPage() {
               value={amount}
               onChange={setAmount}
               currency={wallet?.currency}
-              max={wallet?.balance}
+              max={wallet ? Number(wallet.balance) || 0 : undefined}
               placeholder="Enter amount"
             />
 
