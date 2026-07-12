@@ -9,6 +9,9 @@ import { CreatorCardData } from '@/components/marketplace/CreatorPostCard';
 import { Button } from '@/components/ui';
 import { formatNumber, formatCurrency, cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { marketplaceService, MarketplaceContentItem } from '@/services/marketplace.service';
+import { campaignService } from '@/services/campaign.service';
+import { Campaign } from '@/types/campaign.types';
 
 // ── Creator data (Brand sees these) ──
 const allCreators: CreatorCardData[] = [
@@ -109,14 +112,57 @@ export default function MarketplacePage() {
   const [filters, setFilters] = useState<any>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredCreators, setFilteredCreators] = useState(allCreators);
-  const [filteredPosts, setFilteredPosts] = useState(allPosts);
-  const [filteredCampaigns, setFilteredCampaigns] = useState(allCampaigns);
+  const [marketplaceItems, setMarketplaceItems] = useState<MarketplaceContentItem[]>([]);
+  const [filteredPosts, setFilteredPosts] = useState<ContentPost[]>([]);
+  const [filteredCampaigns, setFilteredCampaigns] = useState<BrandCampaign[]>([]);
   const [expandedCampaign, setExpandedCampaign] = useState<string | null>(null);
   const [submittedCampaigns, setSubmittedCampaigns] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isCreator) {
+      loadMarketplaceContent();
+    }
+  }, [isCreator]);
+
+  const loadMarketplaceContent = async () => {
+    setLoading(true);
+    try {
+      const response = await marketplaceService.browse({ limit: 50 });
+      setMarketplaceItems(response.items || []);
+    } catch (error) {
+      console.error('Failed to load marketplace content:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isCreator && marketplaceItems.length > 0) {
+      const posts: ContentPost[] = marketplaceItems.map((item, idx) => {
+        const creator = allCreators.find(c => c.id === item.creatorProfileId);
+        return {
+          id: item.id,
+          creatorId: item.creatorProfileId,
+          title: item.title,
+          description: item.description ?? '',
+          type: item.type === 'VIDEO' ? 'YouTube' : item.type === 'IMAGE' ? 'Post' : 'Reel',
+          platform: item.platforms?.[0] ?? 'Instagram',
+          niche: 'General',
+          price: item.price,
+          views: 0,
+          engagement: 0,
+          deliveryDays: 3,
+          color: creator?.color ?? 'from-blue-400 to-indigo-500',
+        };
+      });
+      setFilteredPosts(posts);
+    }
+  }, [marketplaceItems, isCreator]);
 
   useEffect(() => {
     let creators = [...allCreators];
-    let posts = [...allPosts];
+    let posts = [...filteredPosts];
     let campaigns = [...allCampaigns];
     const q = (filters.searchQuery || searchQuery || '').toLowerCase();
 

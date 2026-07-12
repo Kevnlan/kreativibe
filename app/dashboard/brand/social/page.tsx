@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Instagram, Facebook, Youtube, Twitter, Linkedin, Link2, CheckCircle, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { Instagram, Facebook, Youtube, Twitter, Music2, Link2, CheckCircle, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { Button, Card, CardContent, CardHeader, CardTitle, StatusBadge } from '@/components/ui';
 import { socialService } from '@/services/social.service';
 import { SocialAccount, SocialPlatform } from '@/types/api-contracts/social.types';
 
-const ALL_PLATFORMS: SocialPlatform[] = ['INSTAGRAM', 'FACEBOOK', 'YOUTUBE', 'TWITTER', 'LINKEDIN'];
+const ALL_PLATFORMS: SocialPlatform[] = ['INSTAGRAM', 'TIKTOK', 'FACEBOOK', 'YOUTUBE', 'TWITTER'];
 
 export default function SocialMediaPage() {
   const [accounts, setAccounts] = useState<SocialAccount[]>([]);
@@ -83,8 +83,8 @@ export default function SocialMediaPage() {
         return <Youtube className="h-5 w-5" />;
       case 'TWITTER':
         return <Twitter className="h-5 w-5" />;
-      case 'LINKEDIN':
-        return <Linkedin className="h-5 w-5" />;
+      case 'TIKTOK':
+        return <Music2 className="h-5 w-5" />;
     }
   };
 
@@ -98,8 +98,8 @@ export default function SocialMediaPage() {
         return 'from-red-600 to-red-700';
       case 'TWITTER':
         return 'from-sky-500 to-blue-600';
-      case 'LINKEDIN':
-        return 'from-blue-700 to-blue-800';
+      case 'TIKTOK':
+        return 'from-gray-800 to-gray-900';
     }
   };
 
