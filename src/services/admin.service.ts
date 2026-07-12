@@ -1,5 +1,6 @@
 import { apiClient } from '../lib/api-client';
 import { PaginatedResponse } from '../types/api.types';
+import { CreatePlanData, UpdatePlanData, SubscriptionPlan } from '../types/api-contracts/subscription.types';
 
 export interface AdminCreator {
   id: string;
@@ -187,5 +188,14 @@ export const adminService = {
   // ── Phase 4: Audit Logs ──
   async listAuditLogs(filters?: AuditLogFilters): Promise<AuditLogListResponse> {
     return apiClient.post('/admin/audit-logs/list', filters ?? {});
+  },
+
+  // ── Phase 5: Subscription Plans ──
+  async createPlan(data: CreatePlanData): Promise<SubscriptionPlan> {
+    return apiClient.post('/admin/subscriptions/plans/create', data);
+  },
+
+  async updatePlan(data: UpdatePlanData): Promise<SubscriptionPlan> {
+    return apiClient.post('/admin/subscriptions/plans/update', data);
   },
 };

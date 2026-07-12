@@ -30,7 +30,13 @@ export default function WalletPage() {
         walletService.getWalletBalance(),
         walletService.getTransactions({ limit: 10 }),
       ]);
-      setWallet(walletResponse.wallet);
+      setWallet({
+        ...walletResponse.wallet,
+        balance: Number(walletResponse.wallet.balance) || 0,
+        pendingBalance: Number(walletResponse.wallet.pendingBalance) || 0,
+        totalEarnings: Number(walletResponse.wallet.totalEarnings) || 0,
+        totalWithdrawals: Number(walletResponse.wallet.totalWithdrawals) || 0,
+      });
       setTransactions(txResponse.transactions || []);
     } catch {
       setError('Failed to load wallet data. Please try again.');
@@ -164,19 +170,19 @@ export default function WalletPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <StatCard
               title="Available Balance"
-              value={formatCurrency(wallet.balance, wallet.currency)}
+              value={formatCurrency(Number(wallet.balance) || 0, wallet.currency)}
               icon={<WalletIcon className="h-4 w-4" />}
               iconColor="text-brand-blue"
             />
             <StatCard
               title="Pending Balance"
-              value={formatCurrency(wallet.pendingBalance, wallet.currency)}
+              value={formatCurrency(Number(wallet.pendingBalance) || 0, wallet.currency)}
               icon={<TrendingUp className="h-4 w-4" />}
               iconColor="text-orange-600"
             />
             <StatCard
               title="Total Earnings"
-              value={formatCurrency(wallet.totalEarnings, wallet.currency)}
+              value={formatCurrency(Number(wallet.totalEarnings) || 0, wallet.currency)}
               icon={<TrendingUp className="h-4 w-4" />}
               iconColor="text-green-600"
             />

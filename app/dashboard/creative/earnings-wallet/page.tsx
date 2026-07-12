@@ -54,7 +54,13 @@ export default function EarningsWalletPage() {
         walletService.getTransactions({ limit: 10 }),
         earningsService.getSummary(),
       ]);
-      setWallet(walletResponse.wallet);
+      setWallet({
+        ...walletResponse.wallet,
+        balance: Number(walletResponse.wallet.balance) || 0,
+        pendingBalance: Number(walletResponse.wallet.pendingBalance) || 0,
+        totalEarnings: Number(walletResponse.wallet.totalEarnings) || 0,
+        totalWithdrawals: Number(walletResponse.wallet.totalWithdrawals) || 0,
+      });
       setTransactions(txResponse.transactions || []);
       setEarnings(summary);
     } catch (err) {
@@ -114,7 +120,7 @@ export default function EarningsWalletPage() {
       return;
     }
 
-    if (wallet && amount > wallet.balance) {
+    if (wallet && amount > (Number(wallet.balance) || 0)) {
       setWithdrawError('Insufficient balance.');
       return;
     }
@@ -263,16 +269,16 @@ export default function EarningsWalletPage() {
                   <WalletIcon className="h-4 w-4 text-brand-blue" />
                 </div>
                 <p className="text-3xl font-bold text-foreground">
-                  {wallet ? formatCurrency(wallet.balance, wallet.currency) : 'KES 0'}
+                  {wallet ? formatCurrency(Number(wallet.balance) || 0, wallet.currency) : 'KES 0'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Pending: {wallet ? formatCurrency(wallet.pendingBalance, wallet.currency) : 'KES 0'}
+                  Pending: {wallet ? formatCurrency(Number(wallet.pendingBalance) || 0, wallet.currency) : 'KES 0'}
                 </p>
               </CardContent>
             </Card>
             <StatCard
               title="Total Earnings"
-              value={wallet ? formatCurrency(wallet.totalEarnings, wallet.currency) : 'KES 0'}
+              value={wallet ? formatCurrency(Number(wallet.totalEarnings) || 0, wallet.currency) : 'KES 0'}
               icon={<TrendingUp className="h-4 w-4" />}
               iconColor="text-green-600"
             />
@@ -374,7 +380,7 @@ export default function EarningsWalletPage() {
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
             <h2 className="text-xl font-bold mb-1">Withdraw Funds</h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Available: {wallet ? formatCurrency(wallet.balance, wallet.currency) : 'KES 0'}
+              Available: {wallet ? formatCurrency(Number(wallet.balance) || 0, wallet.currency) : 'KES 0'}
             </p>
 
             {!isVerified && (

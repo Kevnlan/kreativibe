@@ -44,19 +44,20 @@ export default function CreatorEducationPage() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const completedCourses = courses.filter(c => c.lessons.every(l => l.completed)).length;
-  const totalLessonsCompleted = courses.reduce((s, c) => s + c.lessons.filter(l => l.completed).length, 0);
-  const certifications = courses.filter(c => c.certification && c.lessons.every(l => l.completed)).length;
+  const safeLessons = (c: Course) => Array.isArray(c.lessons) ? c.lessons : [];
+  const completedCourses = courses.filter(c => safeLessons(c).every(l => l.completed)).length;
+  const totalLessonsCompleted = courses.reduce((s, c) => s + safeLessons(c).filter(l => l.completed).length, 0);
+  const certifications = courses.filter(c => c.certification && safeLessons(c).every(l => l.completed)).length;
 
   const handleAdvanceCourse = async (course: Course) => {
-    const nextLesson = course.lessons.find(l => !l.completed);
+    const nextLesson = (Array.isArray(course.lessons) ? course.lessons : []).find(l => !l.completed);
     if (!nextLesson) return;
     setBusyCourseId(course.id);
     try {
       await educationService.completeLesson(course.id, nextLesson.id);
       setCourses(prev => prev.map(c =>
         c.id === course.id
-          ? { ...c, lessons: c.lessons.map(l => (l.id === nextLesson.id ? { ...l, completed: true } : l)) }
+          ? { ...c, lessons: (Array.isArray(c.lessons) ? c.lessons : []).map(l => (l.id === nextLesson.id ? { ...l, completed: true } : l)) }
           : c
       ));
     } catch {
@@ -168,9 +169,10 @@ export default function CreatorEducationPage() {
       {activeTab === 'courses' && (
         <div className="space-y-4">
           {courses.map(course => {
-            const completedCount = course.lessons.filter(l => l.completed).length;
-            const progress = course.lessons.length ? Math.round((completedCount / course.lessons.length) * 100) : 0;
-            const isComplete = course.lessons.length > 0 && completedCount === course.lessons.length;
+            const lessons = Array.isArray(course.lessons) ? course.lessons : [];
+            const completedCount = lessons.filter(l => l.completed).length;
+            const progress = lessons.length ? Math.round((completedCount / lessons.length) * 100) : 0;
+            const isComplete = lessons.length > 0 && completedCount === lessons.length;
             return (
               <Card key={course.id} className={cn(course.isLocked && 'opacity-60')}>
                 <CardContent className="pt-5">
@@ -203,13 +205,13 @@ export default function CreatorEducationPage() {
                         <p className="text-sm text-muted-foreground mb-3">{course.description}</p>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
                           <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {course.duration}</span>
-                          <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {course.lessons.length} lessons</span>
+                          <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {lessons.length} lessons</span>
                           <span className="flex items-center gap-1"><Target className="h-3 w-3" /> {course.category}</span>
                         </div>
                         {!course.isLocked && (
                           <div className="space-y-1">
                             <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">{completedCount}/{course.lessons.length} lessons</span>
+                              <span className="text-muted-foreground">{completedCount}/{lessons.length} lessons</span>
                               <span className="font-medium">{progress}%</span>
                             </div>
                             <div className="h-2 bg-muted rounded-full overflow-hidden">

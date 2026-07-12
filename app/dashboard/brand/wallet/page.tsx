@@ -47,7 +47,7 @@ export default function BrandWalletPage() {
     setLoading(true);
     try {
       const { wallet, recentTransactions } = await walletService.getWalletBalance();
-      setBalance(wallet.balance);
+      setBalance(Number(wallet.balance) || 0);
       setCurrency(wallet.currency);
       const txResponse = await walletService.getTransactions({ limit: 50 });
       const allTx = [...recentTransactions, ...txResponse.transactions];

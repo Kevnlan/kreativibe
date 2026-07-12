@@ -1,11 +1,11 @@
 export interface Wallet {
   id: string;
   userId: string;
-  balance: number;
+  balance: number | string;
   currency: string;
-  pendingBalance: number;
-  totalEarnings: number;
-  totalWithdrawals: number;
+  pendingBalance: number | string;
+  totalEarnings?: number | string;
+  totalWithdrawals?: number | string;
   createdAt: string;
   updatedAt: string;
 }

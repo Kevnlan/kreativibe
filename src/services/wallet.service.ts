@@ -10,7 +10,18 @@ import {
 
 export const walletService = {
   async getWalletBalance(): Promise<WalletBalanceResponse> {
-    return apiClient.post('/wallet/balance', {});
+    const raw = await apiClient.post<WalletBalanceResponse>('/wallet/balance', {});
+    const w = raw.wallet;
+    return {
+      wallet: {
+        ...w,
+        balance: Number(w.balance) || 0,
+        pendingBalance: Number(w.pendingBalance) || 0,
+        totalEarnings: Number(w.totalEarnings) || 0,
+        totalWithdrawals: Number(w.totalWithdrawals) || 0,
+      },
+      recentTransactions: Array.isArray(raw.recentTransactions) ? raw.recentTransactions : [],
+    };
   },
 
   async getTransactions(filters?: TransactionFilters): Promise<TransactionListResponse> {
