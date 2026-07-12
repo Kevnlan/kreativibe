@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Wallet, AlertCircle, Smartphone, Building2 } from 'lucide-react';
 import { Button, Input, CurrencyInput, Card, CardContent } from '@/components/ui';
 import { Wallet as WalletType } from '@/types/api-contracts/wallet.types';
-import { mockStore } from '@/lib/mock-data/mock-store';
+import { walletService } from '@/services/wallet.service';
+import { withdrawalService } from '@/services/withdrawal.service';
 import { useUser } from '@/contexts/AuthContext';
-import { generateId } from '@/lib/mock-data/generators';
 
 type WithdrawalMethod = 'MPESA' | 'BANK';
 
@@ -40,7 +40,7 @@ export default function NewWithdrawalPage() {
   const loadWallet = async () => {
     setLoading(true);
     try {
-      const walletData = mockStore.getWallet(user!.id);
+      const { wallet: walletData } = await walletService.getWalletBalance();
       setWallet(walletData);
     } catch (error) {
       console.error('Failed to load wallet:', error);
@@ -117,23 +117,13 @@ export default function NewWithdrawalPage() {
     setIsSubmitting(true);
 
     try {
-      // Mock API call - replace with actual withdrawal request
-      const withdrawal = {
-        id: generateId(),
-        userId: user!.id,
+      await withdrawalService.createWithdrawal({
         amount,
-        currency: wallet!.currency,
         method,
-        status: 'PENDING' as const,
-        accountDetails: method === 'MPESA' 
+        accountDetails: method === 'MPESA'
           ? { phoneNumber, accountName }
           : { bankName, accountNumber, accountName, branchCode },
-        fee: calculateFee(),
-        netAmount: calculateNetAmount(),
-        createdAt: new Date().toISOString(),
-      };
-
-      mockStore.addWithdrawal(user!.id, withdrawal);
+      });
       router.push('/dashboard/creative/withdrawals?success=true');
     } catch (err: any) {
       setError(err.message || 'Failed to submit withdrawal request');

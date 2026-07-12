@@ -29,27 +29,32 @@ export interface TaxInfoData {
 
 interface TaxInfoFormProps {
   initialData?: Partial<TaxInfoData>;
-  onSave?: (data: TaxInfoData) => void;
-  onUploadDocument?: (type: string, file: File) => void;
+  onSave?: (data: TaxInfoData) => void | Promise<void>;
+  onUploadDocument?: (type: string, file: File) => void | Promise<void>;
 }
 
 export function TaxInfoForm({ initialData, onSave, onUploadDocument }: TaxInfoFormProps) {
   const [formData, setFormData] = useState<Partial<TaxInfoData>>(initialData || {});
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, string>>({});
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    setTimeout(() => {
-      onSave?.(formData as TaxInfoData);
+    setSaveError(null);
+    try {
+      await onSave?.(formData as TaxInfoData);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Failed to save tax info');
+    } finally {
       setIsSaving(false);
-    }, 1000);
+    }
   };
 
-  const handleFileUpload = (type: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (type: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      onUploadDocument?.(type, file);
+      await onUploadDocument?.(type, file);
       setUploadedFiles(prev => ({ ...prev, [type]: file.name }));
     }
   };
@@ -280,6 +285,9 @@ export function TaxInfoForm({ initialData, onSave, onUploadDocument }: TaxInfoFo
         </div>
 
         {/* Save Button */}
+        {saveError && (
+          <p className="text-sm text-red-600">{saveError}</p>
+        )}
         <Button
           variant="brand"
           className="w-full"

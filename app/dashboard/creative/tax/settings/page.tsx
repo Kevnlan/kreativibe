@@ -5,6 +5,12 @@ import { TaxInfoForm, TaxInfoData } from '@/components/tax/TaxInfoForm';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { taxService } from '@/services/tax.service';
+import { TaxDocumentType } from '@/types/api-contracts/tax.types';
+
+const DOCUMENT_TYPE_MAP: Record<string, TaxDocumentType> = {
+  taxCertificate: 'KRA_CERTIFICATE',
+};
 
 export default function TaxSettingsPage() {
   const router = useRouter();
@@ -13,12 +19,16 @@ export default function TaxSettingsPage() {
     router.push('/dashboard/creative/tax');
   };
 
-  const handleSaveTaxInfo = (data: TaxInfoData) => {
-    console.log('Saving tax info:', data);
+  const handleSaveTaxInfo = async (data: TaxInfoData) => {
+    await taxService.saveTaxInfo({
+      kraPin: data.taxNumber || data.taxId,
+      taxResidency: data.taxResidency,
+      withholdingTaxOptIn: true,
+    });
   };
 
-  const handleUploadDocument = (type: string, file: File) => {
-    console.log('Uploading document:', type, file.name);
+  const handleUploadDocument = async (type: string, file: File) => {
+    await taxService.uploadDocument(file, DOCUMENT_TYPE_MAP[type] ?? 'OTHER');
   };
 
   return (

@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Send, Sparkles, ArrowLeft, CheckCircle, Loader2, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { contentService } from '@/services/content.service';
+import { ContentType, Platform } from '@/types/api-contracts/content.types';
 
 interface Message {
   id: string;
@@ -13,11 +15,11 @@ interface Message {
 }
 
 interface ContentOptimization {
-  contentType?: string;
+  contentType?: ContentType;
   niche?: string;
-  platforms?: string[];
+  platforms?: Platform[];
   currentFollowers?: number;
-  engagementRate?: number;
+  engagementRate?: 'LOW' | 'MEDIUM' | 'HIGH';
   pricingStrategy?: string;
   targetAudience?: string;
   contentStyle?: string;
@@ -47,83 +49,90 @@ export default function ContentOptimizationPage() {
     scrollToBottom();
   }, [messages]);
 
-  const generateAIResponse = async (userMessage: string, currentStep: number): Promise<string> => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
+  const generateAIResponse = async (currentStep: number, data: ContentOptimization): Promise<string> => {
     switch (currentStep) {
       case 1:
         return "Great choice! What's your main niche or industry? For example: Fashion, Beauty, Tech, Food, Fitness, Travel, Lifestyle, etc.";
-      
+
       case 2:
         return "Perfect! Which platforms are you most active on? You can mention multiple:\n\n• Instagram (Reels, Posts, Stories)\n• TikTok (Short videos)\n• YouTube (Long-form content)\n• Facebook\n• Twitter/X\n\nJust list the ones you use regularly.";
-      
+
       case 3:
         return "Awesome! How many followers do you currently have across your main platform? Just give me a rough number.";
-      
+
       case 4:
         return "Nice! What's your average engagement rate? If you're not sure, just tell me:\n\n• High (5%+)\n• Medium (2-5%)\n• Low (under 2%)\n• Not sure";
-      
+
       case 5:
         return "Got it! How do you currently price your content? For example:\n\n• Per post/video\n• Package deals\n• Based on follower count\n• Haven't set pricing yet";
-      
+
       case 6:
         return "Understood! Who is your target audience? Describe them briefly - age range, interests, location, etc.";
-      
+
       case 7:
         return "Last question! How would you describe your content style? For example: Authentic & relatable, Professional & polished, Fun & energetic, Educational, etc.";
-      
-      case 8:
-        const followers = optimization.currentFollowers || 0;
-        const engagementRate = optimization.engagementRate || 3;
-        const suggestedPrice = Math.max(2000, Math.min(20000, Math.floor((followers / 1000) * 100 + (engagementRate * 500))));
-        const monthlyEarnings = suggestedPrice * 4;
-        
-        return `Excellent! 🎉 Based on your profile, here's my optimization strategy:\n\n**Your Profile:**\n• Content Type: ${optimization.contentType}\n• Niche: ${optimization.niche}\n• Platforms: ${optimization.platforms?.join(', ')}\n• Followers: ${followers.toLocaleString()}\n• Engagement: ${engagementRate}%\n• Style: ${optimization.contentStyle}\n\n**My Recommendations:**\n\n💰 **Pricing Strategy:**\n• Suggested price per post: KES ${suggestedPrice.toLocaleString()}\n• Package deal (3 posts): KES ${(suggestedPrice * 2.5).toLocaleString()}\n• Potential monthly earnings: KES ${monthlyEarnings.toLocaleString()}+\n\n📈 **Growth Tips:**\n• Post consistently (3-5 times/week)\n• Use trending audio/hashtags in your niche\n• Engage with your audience within 1 hour of posting\n• Collaborate with creators in ${optimization.niche}\n\n🎯 **Content Strategy:**\n• Create ${optimization.contentType?.toLowerCase()} that showcases products naturally\n• Focus on ${optimization.targetAudience}\n• Maintain your ${optimization.contentStyle?.toLowerCase()} style\n• Add clear CTAs for brand partnerships\n\n🏢 **Attract Brands:**\n• Update your bio with "Open for collaborations"\n• Create a media kit with your stats\n• Tag brands you genuinely use\n• Share case studies of past collaborations\n\n**Next Steps:**\n1. Update your pricing based on these recommendations\n2. Upload 3-5 of your best content pieces\n3. Complete your creator profile with portfolio\n4. Start applying to brand campaigns\n\nReady to implement these strategies?`;
-      
+
+      case 8: {
+        const advice = await contentService.adviseContentStrategy({
+          contentType: data.contentType ?? 'VIDEO',
+          niche: data.niche ?? '',
+          platforms: data.platforms?.length ? data.platforms : ['INSTAGRAM'],
+          currentFollowers: data.currentFollowers ?? 0,
+          engagementRate: data.engagementRate ?? 'MEDIUM',
+          pricingStrategy: data.pricingStrategy ?? '',
+          targetAudience: data.targetAudience ?? '',
+          contentStyle: data.contentStyle ?? '',
+        });
+
+        return `Excellent! 🎉 Based on your profile, here's my optimization strategy:\n\n**Your Profile:**\n• Content Type: ${data.contentType}\n• Niche: ${data.niche}\n• Platforms: ${data.platforms?.join(', ')}\n• Followers: ${(data.currentFollowers ?? 0).toLocaleString()}\n• Engagement: ${data.engagementRate}\n• Style: ${data.contentStyle}\n\n**My Recommendations:**\n\n💰 **Pricing Strategy:**\n• Suggested price per post: KES ${advice.suggestedPricePerPost.toLocaleString()}\n• Package deal: KES ${advice.packageDealPrice.toLocaleString()}\n• Potential monthly earnings: KES ${advice.potentialMonthlyEarnings.toLocaleString()}+\n\n📈 **Growth Tips:**\n${advice.growthTips.map(t => `• ${t}`).join('\n')}\n\n🎯 **Content Strategy:**\n• Post frequency: ${advice.contentStrategy.postFrequency}\n• Best posting times: ${advice.contentStrategy.bestPostingTimes.join(', ')}\n• Recommended hashtags: ${advice.contentStrategy.recommendedHashtags.join(' ')}\n\n🏢 **Attract Brands:**\n${advice.brandAttractionTactics.map(t => `• ${t}`).join('\n')}\n\nReady to implement these strategies?`;
+      }
+
       default:
         return "I'm here to help optimize your content strategy!";
     }
   };
 
-  const extractOptimizationData = (userMessage: string, currentStep: number) => {
+  const extractOptimizationData = (userMessage: string, currentStep: number): ContentOptimization => {
     const updated = { ...optimization };
 
     switch (currentStep) {
-      case 1:
-        updated.contentType = userMessage;
+      case 1: {
+        const t = userMessage.toLowerCase();
+        updated.contentType = /image|photo/.test(t) ? 'IMAGE' : /audio|podcast/.test(t) ? 'AUDIO' : /brand|asset/.test(t) ? 'BRAND_ASSET' : 'VIDEO';
         break;
+      }
       case 2:
         updated.niche = userMessage;
         break;
-      case 3:
-        const platforms = [];
-        if (/instagram/i.test(userMessage)) platforms.push('Instagram');
-        if (/tiktok/i.test(userMessage)) platforms.push('TikTok');
-        if (/youtube/i.test(userMessage)) platforms.push('YouTube');
-        if (/facebook/i.test(userMessage)) platforms.push('Facebook');
-        if (/twitter|x/i.test(userMessage)) platforms.push('Twitter/X');
-        updated.platforms = platforms.length > 0 ? platforms : ['Instagram'];
+      case 3: {
+        const platforms: Platform[] = [];
+        if (/instagram/i.test(userMessage)) platforms.push('INSTAGRAM');
+        if (/tiktok/i.test(userMessage)) platforms.push('TIKTOK');
+        if (/youtube/i.test(userMessage)) platforms.push('YOUTUBE');
+        if (/facebook/i.test(userMessage)) platforms.push('FACEBOOK');
+        if (/twitter|\bx\b/i.test(userMessage)) platforms.push('TWITTER');
+        updated.platforms = platforms.length > 0 ? platforms : ['INSTAGRAM'];
         break;
-      case 4:
-        const followersMatch = userMessage.match(/\d+/);
+      }
+      case 4: {
+        const followersMatch = userMessage.match(/[\d,]+/);
         if (followersMatch) {
-          let followers = parseInt(followersMatch[0]);
+          let followers = parseInt(followersMatch[0].replace(/,/g, ''), 10);
           if (/k/i.test(userMessage)) followers *= 1000;
           if (/m/i.test(userMessage)) followers *= 1000000;
           updated.currentFollowers = followers;
         } else {
-          updated.currentFollowers = 10000;
+          updated.currentFollowers = 0;
         }
         break;
+      }
       case 5:
-        if (/high/i.test(userMessage) || /5|6|7|8|9|10/i.test(userMessage)) {
-          updated.engagementRate = 6;
-        } else if (/medium/i.test(userMessage) || /2|3|4/i.test(userMessage)) {
-          updated.engagementRate = 3;
-        } else if (/low/i.test(userMessage) || /1/i.test(userMessage)) {
-          updated.engagementRate = 1.5;
+        if (/high/i.test(userMessage)) {
+          updated.engagementRate = 'HIGH';
+        } else if (/low/i.test(userMessage)) {
+          updated.engagementRate = 'LOW';
         } else {
-          updated.engagementRate = 3;
+          updated.engagementRate = 'MEDIUM';
         }
         break;
       case 6:
@@ -138,6 +147,7 @@ export default function ContentOptimizationPage() {
     }
 
     setOptimization(updated);
+    return updated;
   };
 
   const handleSend = async () => {
@@ -154,24 +164,31 @@ export default function ContentOptimizationPage() {
     setInput('');
     setIsTyping(true);
 
-    extractOptimizationData(input.trim(), step);
+    const updatedData = extractOptimizationData(input.trim(), step);
 
-    const aiResponse = await generateAIResponse(input.trim(), step);
-
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: aiResponse,
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, assistantMessage]);
-    setIsTyping(false);
-    setStep(prev => prev + 1);
+    try {
+      const aiResponse = await generateAIResponse(step, updatedData);
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: aiResponse,
+        timestamp: new Date(),
+      }]);
+      setStep(prev => prev + 1);
+    } catch (error) {
+      console.error('Failed to generate content advice:', error);
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: "Sorry, I couldn't generate your strategy right now. Please try again.",
+        timestamp: new Date(),
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleImplement = () => {
-    alert('Great! Your optimization strategy has been saved. Redirecting to upload content...');
     router.push('/dashboard/creative/content/new');
   };
 
