@@ -1,115 +1,18 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { AuthResponse, ApiError, LoginResult } from '../types/auth';
 import { normalizeCreatorProfile } from './normalize';
 
 class ApiClient {
   private client: AxiosInstance;
-  private baseURL: string;
 
   constructor() {
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3050/api';
-    
     this.client = axios.create({
-      baseURL: this.baseURL,
+      baseURL: '/api',
       timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
       },
     });
-
-    this.setupInterceptors();
-  }
-
-  private setupInterceptors() {
-    // Request interceptor to add auth token
-    this.client.interceptors.request.use(
-      (config) => {
-        const token = this.getToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => {
-        return Promise.reject(error);
-      }
-    );
-
-    // Response interceptor to handle errors and token refresh
-    this.client.interceptors.response.use(
-      (response: AxiosResponse) => {
-        return response;
-      },
-      async (error) => {
-        const originalRequest = error.config;
-
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          originalRequest._retry = true;
-
-          try {
-            await this.refreshToken();
-            const token = this.getToken();
-            if (token) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-              return this.client(originalRequest);
-            }
-          } catch (refreshError) {
-            // Refresh failed, logout user
-            this.removeTokens();
-            window.location.href = '/auth/login';
-            return Promise.reject(refreshError);
-          }
-        }
-
-        return Promise.reject(this.handleError(error));
-      }
-    );
-  }
-
-  private getToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('access_token');
-    }
-    return null;
-  }
-
-  private getRefreshToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('refresh_token');
-    }
-    return null;
-  }
-
-  private setTokens(accessToken: string, refreshToken: string) {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('access_token', accessToken);
-      localStorage.setItem('refresh_token', refreshToken);
-    }
-  }
-
-  private removeTokens() {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-    }
-  }
-
-  private async refreshToken(): Promise<void> {
-    const refreshToken = this.getRefreshToken();
-    if (!refreshToken) {
-      throw new Error('No refresh token available');
-    }
-
-    try {
-      const response = await this.client.post('/auth/refresh', {
-        refreshToken,
-      });
-
-      const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-      this.setTokens(accessToken, newRefreshToken);
-    } catch (error) {
-      throw new Error('Failed to refresh token');
-    }
   }
 
   private handleError(error: any): ApiError {
@@ -149,7 +52,6 @@ class ApiClient {
       }
 
       const { user, accessToken, refreshToken, creatorProfile, brandProfile } = data;
-      this.setTokens(accessToken, refreshToken);
 
       return {
         user,
@@ -168,7 +70,6 @@ class ApiClient {
       const response = await this.client.post('/auth/login/2fa', { sessionToken, code });
 
       const { user, accessToken, refreshToken, creatorProfile, brandProfile } = response.data.data;
-      this.setTokens(accessToken, refreshToken);
 
       return {
         user,
@@ -193,7 +94,6 @@ class ApiClient {
       });
 
       const { user, accessToken, refreshToken, creatorProfile, brandProfile } = response.data.data;
-      this.setTokens(accessToken, refreshToken);
 
       return {
         user,
@@ -209,13 +109,9 @@ class ApiClient {
 
   async logout(): Promise<void> {
     try {
-      const refreshToken = this.getRefreshToken();
-      await this.client.post('/auth/logout', { refreshToken });
+      await this.client.post('/auth/logout', {});
     } catch (error) {
-      // Continue with logout even if API call fails
       console.error('Logout API call failed:', error);
-    } finally {
-      this.removeTokens();
     }
   }
 

@@ -1,5 +1,4 @@
 export const config = {
-  apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
   useMockApi: process.env.NEXT_PUBLIC_USE_MOCK_API === 'true',
   oauthRedirectUrl: process.env.NEXT_PUBLIC_OAUTH_REDIRECT_URL || 'http://localhost:3000/auth/callback',
   

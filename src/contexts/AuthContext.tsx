@@ -81,7 +81,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const mockUser = buildMockUser(email, role);
       if (typeof window !== 'undefined') {
         localStorage.setItem('mock_user', JSON.stringify(mockUser));
-        localStorage.setItem('access_token', 'mock-token');
       }
       setUser(mockUser);
       return { user: mockUser, accessToken: 'mock-token', refreshToken: 'mock-token' };
@@ -175,23 +174,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Check for existing auth on mount
   useEffect(() => {
     const initializeAuth = async () => {
-      if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('access_token');
-        if (token) {
-          try {
-            await refreshUser();
-          } catch (error) {
-            console.error('Failed to refresh user:', error);
-            // Clear invalid tokens
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            setLoading(false);
+      try {
+        await refreshUser();
+      } catch (error) {
+        // If real API fails, try restoring a mock session
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem('mock_user');
+          if (stored) {
+            try {
+              const mockUser = JSON.parse(stored) as User;
+              setUser(mockUser);
+              return;
+            } catch {
+              // ignore parse errors
+            }
           }
-        } else {
-          setLoading(false);
         }
-      } else {
-        setLoading(false);
+        setUser(null);
+        setCreatorProfile(null);
+        setBrandProfile(null);
       }
     };
 
